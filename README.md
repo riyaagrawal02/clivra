@@ -1,73 +1,183 @@
-# React + TypeScript + Vite
+<div align="center">
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# **Clivra**
 
-Currently, two official plugins are available:
+### Adaptive Study Planning & Exam Readiness System
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+**Decide what to study today — intelligently.**
 
-## React Compiler
+Clivra is a full-stack web application that converts student inputs into an **adaptive, explainable daily study plan**, continuously adjusted based on progress, confidence, and exam proximity.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+</div>
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🔍 Why Clivra Exists
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Most students don’t fail because they don’t work hard.
+They fail because they **don’t know what to work on today**.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Common problems:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+* Static timetables that don’t adapt
+* Poor revision prioritization
+* False confidence before exams
+* Burnout from unrealistic schedules
+
+👉 **Clivra solves the decision layer**, not just task tracking.
+
+---
+
+## 🧠 What Makes Clivra Different
+
+| Typical Study Apps   | Clivra                             |
+| -------------------- | ---------------------------------- |
+| Manual schedules     | Auto-generated, adaptive schedules |
+| To-do lists          | Priority-driven execution plan     |
+| Streak-only tracking | Progress + confidence feedback     |
+
+
+Clivra answers one core question clearly:
+
+> **“Why am I studying this topic today?”**
+
+---
+
+## 🧩 Core Features (System-Oriented)
+
+### 🧮 Priority Scoring Engine
+
+Each topic is assigned a **priority score (0–100)** using:
+
+* Subject strength (weak → strong)
+* Confidence level (1–5)
+* Days remaining until exam
+* Last revision timestamp
+
+This ensures:
+
+* Weak topics surface early
+* Strong topics are revised, not ignored
+* Urgency increases naturally as exams approach
+
+---
+
+### 📅 Adaptive Daily Schedule Generator
+
+* Builds a **realistic day plan** based on available hours
+* Uses Pomodoro blocks (configurable)
+* Mixes:
+
+  * New learning
+  * Active revision
+  * Short recall sessions
+* Rebalances automatically if a day is missed
+  *(no overload, no guilt loops)*
+
+
+---
+
+### 📊 Progress & Exam Readiness
+
+**Weekly Report**
+
+* Planned vs completed time
+* Subject-wise effort distribution
+* Confidence trend
+* Missed vs recovered sessions
+
+**Exam Readiness Prediction**
+Calculated using:
+
+* Topic completion %
+* Revision frequency
+* Consistency score
+* Confidence movement
+
+Status levels:
+
+* Not Ready
+* Improving
+* Almost Ready
+* Exam Ready
+
+---
+
+## ⚙️ Supporting Features (Secondary)
+
+These **support execution**, not replace logic:
+
+* ⏱ Built-in Pomodoro timer
+* 🔥 Meaningful study streaks
+* 🎯 Confidence-based topic re-prioritization
+* 📈 Clean analytics dashboard
+
+---
+
+## 🏗️ Architecture Overview
+
+```text
+User Input
+   ↓
+Priority Scoring Logic
+   ↓
+Daily Schedule Generator
+   ↓
+Execution Tracking
+   ↓
+Progress Analysis
+   ↓
+Schedule Rebalancing + Readiness Prediction
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🛠 Tech Stack
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+* React
+* Tailwind CSS
+* Typescript
+* Component-driven UI
+* Mobile-responsive, distraction-free design
+* Superbase
+
+---
+
+## 🧠 Engineering Highlights
+
+* Clear separation of concerns:
+
+  * Data layer
+  * Scheduling logic
+  * UI state
+* Scalable schemas for exams, subjects, topics
+* No black-box decisions — every output is traceable
+* Designed with system evolution in mind
+
+---
+
+## 📌 Why This Project Matters (Resume Angle)
+
+Clivra demonstrates:
+
+* Algorithmic thinking
+* Scheduling & prioritization logic
+* Full-stack system design
+* Data-driven decision making
+* Product-level problem solving
+* Real-world user empathy
+
+This is **not a CRUD app**.
+It’s a **decision system**.
+
+---
+
+
+## 🧭 Final Note
+
+Clivra isn’t built to *look productive*.
+It’s built to **help students study the right thing at the right time** — consistently.
+
+---
+
+
