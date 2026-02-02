@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/superbase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { calculateTopicPriority, calculateNextRevision } from "@/lib/study-algorithm";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/superbase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Topic = Tables<"topics">;
 export type TopicInsert = TablesInsert<"topics">;

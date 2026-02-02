@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/superbase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, startOfWeek, endOfWeek, subDays } from "date-fns";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/superbase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type DailyProgress = Tables<"daily_progress">;
 export type DailyProgressInsert = TablesInsert<"daily_progress">;
@@ -22,7 +22,7 @@ export function useTodayProgress() {
         .eq("user_id", user.id)
         .eq("date", today)
         .single();
-      
+
       if (error && error.code !== "PGRST116") throw error;
       return data as DailyProgress | null;
     },
@@ -46,7 +46,7 @@ export function useWeeklyProgress() {
         .gte("date", format(weekStart, "yyyy-MM-dd"))
         .lte("date", format(weekEnd, "yyyy-MM-dd"))
         .order("date", { ascending: true });
-      
+
       if (error) throw error;
       return data as DailyProgress[];
     },
@@ -68,7 +68,7 @@ export function useRecentProgress(days: number = 30) {
         .eq("user_id", user.id)
         .gte("date", format(startDate, "yyyy-MM-dd"))
         .order("date", { ascending: true });
-      
+
       if (error) throw error;
       return data as DailyProgress[];
     },
@@ -81,16 +81,16 @@ export function useUpdateDailyProgress() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ 
-      date, 
-      updates 
-    }: { 
-      date: string; 
-      updates: Partial<DailyProgressUpdate>; 
+    mutationFn: async ({
+      date,
+      updates
+    }: {
+      date: string;
+      updates: Partial<DailyProgressUpdate>;
     }) => {
       if (!user) throw new Error("Not authenticated");
 
-      
+
       const { data: existing } = await supabase
         .from("daily_progress")
         .select("id")
@@ -106,7 +106,7 @@ export function useUpdateDailyProgress() {
           .eq("date", date)
           .select()
           .single();
-        
+
         if (error) throw error;
         return data;
       } else {
@@ -119,7 +119,7 @@ export function useUpdateDailyProgress() {
           })
           .select()
           .single();
-        
+
         if (error) throw error;
         return data;
       }
@@ -135,18 +135,18 @@ export function useIncrementDailyProgress() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ 
-      completedMinutes, 
-      sessionsCompleted = 1 
-    }: { 
-      completedMinutes: number; 
+    mutationFn: async ({
+      completedMinutes,
+      sessionsCompleted = 1
+    }: {
+      completedMinutes: number;
       sessionsCompleted?: number;
     }) => {
       if (!user) throw new Error("Not authenticated");
 
       const today = format(new Date(), "yyyy-MM-dd");
 
-     
+
       const { data: existing } = await supabase
         .from("daily_progress")
         .select("*")
@@ -169,7 +169,7 @@ export function useIncrementDailyProgress() {
           .eq("date", today)
           .select()
           .single();
-        
+
         if (error) throw error;
         return data;
       } else {
@@ -184,7 +184,7 @@ export function useIncrementDailyProgress() {
           })
           .select()
           .single();
-        
+
         if (error) throw error;
         return data;
       }

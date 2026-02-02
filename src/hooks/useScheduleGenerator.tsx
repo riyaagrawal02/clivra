@@ -6,7 +6,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useUpdateDailyProgress } from "@/hooks/useDailyProgress";
 import { generateDailySchedule } from "@/lib/study-algorithm";
 import { format, addMinutes, startOfDay, setHours, setMinutes } from "date-fns";
-import type { TablesInsert } from "@/integrations/superbase/types";
+import type { TablesInsert } from "@/integrations/supabase/types";
 
 type SubjectsWithTopics = NonNullable<ReturnType<typeof useSubjectsWithTopics>["data"]>;
 type SubjectWithTopics = SubjectsWithTopics[number];

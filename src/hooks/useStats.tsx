@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/superbase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveExam, useDaysUntilExam } from "@/hooks/useExams";
 import { useProfile } from "@/hooks/useProfile";

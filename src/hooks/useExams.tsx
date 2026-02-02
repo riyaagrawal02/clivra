@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/superbase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/superbase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Exam = Tables<"exams">;
 export type ExamInsert = TablesInsert<"exams">;
@@ -20,7 +20,7 @@ export function useExams() {
         .select("*")
         .eq("user_id", user.id)
         .order("exam_date", { ascending: true });
-      
+
       if (error) throw error;
       return data as Exam[];
     },
@@ -41,7 +41,7 @@ export function useActiveExam() {
         .eq("user_id", user.id)
         .eq("is_active", true)
         .single();
-      
+
       if (error && error.code !== "PGRST116") throw error;
       return data as Exam | null;
     },
@@ -57,7 +57,7 @@ export function useCreateExam() {
   return useMutation({
     mutationFn: async (exam: Omit<ExamInsert, "user_id">) => {
       if (!user) throw new Error("Not authenticated");
-      
+
       // If this exam is active, deactivate others first
       if (exam.is_active) {
         await supabase
@@ -71,7 +71,7 @@ export function useCreateExam() {
         .insert({ ...exam, user_id: user.id })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -94,7 +94,7 @@ export function useUpdateExam() {
   return useMutation({
     mutationFn: async ({ id, ...updates }: ExamUpdate & { id: string }) => {
       if (!user) throw new Error("Not authenticated");
-      
+
       // If setting this exam as active, deactivate others first
       if (updates.is_active) {
         await supabase
@@ -111,7 +111,7 @@ export function useUpdateExam() {
         .eq("user_id", user.id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -139,7 +139,7 @@ export function useDeleteExam() {
         .delete()
         .eq("id", id)
         .eq("user_id", user.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -155,16 +155,16 @@ export function useDeleteExam() {
 
 export function useDaysUntilExam() {
   const { data: exam } = useActiveExam();
-  
+
   if (!exam) return null;
-  
+
   const examDate = new Date(exam.exam_date);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   examDate.setHours(0, 0, 0, 0);
-  
+
   const diffTime = examDate.getTime() - today.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
+
   return diffDays;
 }

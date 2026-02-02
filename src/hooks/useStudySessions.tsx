@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/superbase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { startOfDay, endOfDay, endOfWeek, format } from "date-fns";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/superbase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type StudySession = Tables<"study_sessions">;
 export type StudySessionInsert = TablesInsert<"study_sessions">;
@@ -23,7 +23,7 @@ export function useTodaySessions() {
     queryKey: ["studySessions", "today", user?.id, format(today, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("study_sessions")
         .select(`
@@ -37,7 +37,7 @@ export function useTodaySessions() {
         .gte("scheduled_at", startOfDay(today).toISOString())
         .lte("scheduled_at", endOfDay(today).toISOString())
         .order("scheduled_at", { ascending: true });
-      
+
       if (error) throw error;
       return data as StudySessionWithTopic[];
     },
@@ -52,7 +52,7 @@ export function useSessionsByDate(date: Date) {
     queryKey: ["studySessions", "byDate", user?.id, format(date, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("study_sessions")
         .select(`
@@ -66,7 +66,7 @@ export function useSessionsByDate(date: Date) {
         .gte("scheduled_at", startOfDay(date).toISOString())
         .lte("scheduled_at", endOfDay(date).toISOString())
         .order("scheduled_at", { ascending: true });
-      
+
       if (error) throw error;
       return data as StudySessionWithTopic[];
     },
@@ -82,7 +82,7 @@ export function useWeekSessions(weekStart: Date) {
     queryKey: ["studySessions", "week", user?.id, format(weekStart, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!user) return [];
-      
+
       const { data, error } = await supabase
         .from("study_sessions")
         .select(`
@@ -96,7 +96,7 @@ export function useWeekSessions(weekStart: Date) {
         .gte("scheduled_at", weekStart.toISOString())
         .lte("scheduled_at", weekEnd.toISOString())
         .order("scheduled_at", { ascending: true });
-      
+
       if (error) throw error;
       return data as StudySessionWithTopic[];
     },
@@ -118,7 +118,7 @@ export function useCreateStudySession() {
         .insert({ ...session, user_id: user.id })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -150,7 +150,7 @@ export function useStartSession() {
         .eq("user_id", user.id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -166,14 +166,14 @@ export function useCompleteSession() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ 
-      id, 
-      actualMinutes, 
+    mutationFn: async ({
+      id,
+      actualMinutes,
       pomodorosCompleted,
-      notes 
-    }: { 
-      id: string; 
-      actualMinutes: number; 
+      notes
+    }: {
+      id: string;
+      actualMinutes: number;
       pomodorosCompleted: number;
       notes?: string;
     }) => {
@@ -192,7 +192,7 @@ export function useCompleteSession() {
         .eq("user_id", user.id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -222,7 +222,7 @@ export function useSkipSession() {
         .eq("user_id", user.id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -245,7 +245,7 @@ export function useDeleteSession() {
         .delete()
         .eq("id", id)
         .eq("user_id", user.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -269,15 +269,15 @@ export function useBulkCreateSessions() {
         .from("study_sessions")
         .insert(sessionsWithUserId)
         .select();
-      
+
       if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["studySessions"] });
-      toast({ 
-        title: "Schedule generated", 
-        description: `${data.length} sessions have been scheduled.` 
+      toast({
+        title: "Schedule generated",
+        description: `${data.length} sessions have been scheduled.`
       });
     },
     onError: (error) => {

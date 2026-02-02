@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/superbase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveExam } from "@/hooks/useExams";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/superbase/types";
+import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Subject = Tables<"subjects">;
 export type SubjectInsert = TablesInsert<"subjects">;
@@ -23,7 +23,7 @@ export function useSubjects() {
         .eq("user_id", user.id)
         .eq("exam_id", activeExam.id)
         .order("name", { ascending: true });
-      
+
       if (error) throw error;
       return data as Subject[];
     },
@@ -39,14 +39,14 @@ export function useSubjectsWithTopics() {
     queryKey: ["subjectsWithTopics", user?.id, activeExam?.id],
     queryFn: async () => {
       if (!user || !activeExam) return [];
-      
+
       const { data: subjects, error: subjectsError } = await supabase
         .from("subjects")
         .select("*")
         .eq("user_id", user.id)
         .eq("exam_id", activeExam.id)
         .order("name", { ascending: true });
-      
+
       if (subjectsError) throw subjectsError;
 
       const { data: topics, error: topicsError } = await supabase
@@ -54,7 +54,7 @@ export function useSubjectsWithTopics() {
         .select("*")
         .eq("user_id", user.id)
         .order("priority_score", { ascending: false });
-      
+
       if (topicsError) throw topicsError;
 
       // Join topics to subjects
@@ -83,7 +83,7 @@ export function useCreateSubject() {
         .insert({ ...subject, user_id: user.id, exam_id: activeExam.id })
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -114,7 +114,7 @@ export function useUpdateSubject() {
         .eq("user_id", user.id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -137,7 +137,7 @@ export function useDeleteSubject() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!user) throw new Error("Not authenticated");
-      
+
       // First delete all topics under this subject
       await supabase
         .from("topics")
@@ -150,7 +150,7 @@ export function useDeleteSubject() {
         .delete()
         .eq("id", id)
         .eq("user_id", user.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {

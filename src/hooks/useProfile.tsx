@@ -1,8 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/superbase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables, TablesUpdate } from "@/integrations/superbase/types";
+import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Profile = Tables<"profiles">;
 export type ProfileUpdate = TablesUpdate<"profiles">;
@@ -19,7 +19,7 @@ export function useProfile() {
         .select("*")
         .eq("user_id", user.id)
         .single();
-      
+
       if (error && error.code !== "PGRST116") throw error;
       return data as Profile | null;
     },
@@ -50,7 +50,7 @@ export function useUpdateProfile() {
           .eq("user_id", user.id)
           .select()
           .single();
-        
+
         if (error) throw error;
         return data;
       } else {
@@ -60,7 +60,7 @@ export function useUpdateProfile() {
           .insert({ ...updates, user_id: user.id })
           .select()
           .single();
-        
+
         if (error) throw error;
         return data;
       }
@@ -104,7 +104,7 @@ export function useUpdateStreak() {
         .eq("user_id", user.id)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
