@@ -143,35 +143,6 @@ Schedule Rebalancing + Readiness Prediction
 
 ---
 
-## 🧠 Engineering Highlights
-
-* Clear separation of concerns:
-
-  * Data layer
-  * Scheduling logic
-  * UI state
-* Scalable schemas for exams, subjects, topics
-* No black-box decisions — every output is traceable
-* Designed with system evolution in mind
-
----
-
-## 📌 Why This Project Matters (Resume Angle)
-
-Clivra demonstrates:
-
-* Algorithmic thinking
-* Scheduling & prioritization logic
-* Full-stack system design
-* Data-driven decision making
-* Product-level problem solving
-* Real-world user empathy
-
-This is **not a CRUD app**.
-It’s a **decision system**.
-
----
-
 
 ## 🧭 Final Note
 
