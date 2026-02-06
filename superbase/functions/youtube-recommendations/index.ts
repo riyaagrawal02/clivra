@@ -1,5 +1,15 @@
+// @ts-expect-error Deno runtime import
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+// @ts-expect-error Deno runtime import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0?target=deno";
+
+type Request = globalThis.Request;
+
+declare const Deno: {
+  env: {
+    get: (key: string) => string | undefined;
+  };
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -65,7 +75,7 @@ function filterVideos(videos: YouTubeVideo[]): YouTubeVideo[] {
   });
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });

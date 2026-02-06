@@ -279,6 +279,47 @@ export type Database = {
           }
         ];
       };
+      youtube_cache: {
+        Row: {
+          created_at: string;
+          expires_at: string;
+          fetched_at: string;
+          id: string;
+          search_query: string | null;
+          topic_id: string;
+          user_id: string;
+          videos: Json;
+        };
+        Insert: {
+          created_at?: string;
+          expires_at: string;
+          fetched_at: string;
+          id?: string;
+          search_query?: string | null;
+          topic_id: string;
+          user_id: string;
+          videos: Json;
+        };
+        Update: {
+          created_at?: string;
+          expires_at?: string;
+          fetched_at?: string;
+          id?: string;
+          search_query?: string | null;
+          topic_id?: string;
+          user_id?: string;
+          videos?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "youtube_cache_topic_id_fkey";
+            columns: ["topic_id"];
+            isOneToOne: false;
+            referencedRelation: "topics";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       topics: {
         Row: {
           completed_hours: number | null;

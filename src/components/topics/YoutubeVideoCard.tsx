@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Clock, Eye } from "lucide-react";
-import type { YouTubeVideo } from "@/hooks/useYouTubeRecommendations";
+import type { YouTubeVideo } from "@/hooks/useYoutubeRecommendations";
 
 interface YouTubeVideoCardProps {
   video: YouTubeVideo;
@@ -10,7 +10,7 @@ interface YouTubeVideoCardProps {
 function formatViewCount(count: string): string {
   const num = parseInt(count, 10);
   if (isNaN(num)) return count;
-  
+
   if (num >= 1000000) {
     return `${(num / 1000000).toFixed(1)}M`;
   } else if (num >= 1000) {
@@ -63,7 +63,7 @@ export function YouTubeVideoCard({ video }: YouTubeVideoCardProps) {
                   {video.duration}
                 </span>
               </div>
-              
+
               <Button
                 size="sm"
                 variant="ghost"

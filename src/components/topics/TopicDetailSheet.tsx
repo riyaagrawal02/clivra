@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfidenceBadge } from "@/components/ui/ConfidenceBadge";
 import { YouTubeVideoCard } from "@/components/topics/YoutubeVideoCard";
-import { useYouTubeRecommendations } from "@/hooks/useYouTubeRecommendations";
+import { useYouTubeRecommendations } from "@/hooks/useYoutubeRecommendations";
 import { useRevisionHistory, useRecordRevision } from "@/hooks/useRevisions";
 import { useUpdateTopicConfidence } from "@/hooks/useTopics";
 import { BookOpen, Video, History, Clock, TrendingUp, TrendingDown } from "lucide-react";
