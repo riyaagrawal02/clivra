@@ -9,7 +9,7 @@
  * - Completion rate
  * 
  * Returns a priority score (0-100) for each topic.
- */
+ */  
 
 interface Topic {
   id: string;

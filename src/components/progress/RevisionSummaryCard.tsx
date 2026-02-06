@@ -4,6 +4,11 @@ import { Progress } from "@/components/ui/progress";
 import { useRevisionSummary, useWeeklyRevisionStats } from "@/hooks/useRevisions";
 import { RefreshCw, CheckCircle, AlertTriangle, Clock, TrendingUp } from "lucide-react";
 
+type SummaryTopic = {
+  id: string;
+  name: string;
+};
+
 export function RevisionSummaryCard() {
   const { data: summary, isLoading: summaryLoading } = useRevisionSummary();
   const { data: weeklyStats, isLoading: statsLoading } = useWeeklyRevisionStats();
@@ -88,7 +93,7 @@ export function RevisionSummaryCard() {
                     {summary.overdueTopics.length} Overdue
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {summary.overdueTopics.slice(0, 3).map((topic) => (
+                    {summary.overdueTopics.slice(0, 3).map((topic: SummaryTopic) => (
                       <Badge key={topic.id} variant="destructive" className="text-xs">
                         {topic.name}
                       </Badge>
@@ -112,7 +117,7 @@ export function RevisionSummaryCard() {
                     {summary.pendingRevisions.length} Pending
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {summary.pendingRevisions.slice(0, 3).map((topic) => (
+                    {summary.pendingRevisions.slice(0, 3).map((topic: SummaryTopic) => (
                       <Badge key={topic.id} variant="outline" className="text-xs">
                         {topic.name}
                       </Badge>
@@ -127,7 +132,7 @@ export function RevisionSummaryCard() {
               </div>
             )}
 
-            {/* Completed This Week */}
+
             {summary.completedThisWeek.length > 0 && (
               <div className="flex items-start gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
@@ -136,7 +141,7 @@ export function RevisionSummaryCard() {
                     {summary.completedThisWeek.length} Revised This Week
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {summary.completedThisWeek.slice(0, 3).map((topic) => (
+                    {summary.completedThisWeek.slice(0, 3).map((topic: SummaryTopic) => (
                       <Badge key={topic.id} variant="secondary" className="text-xs bg-green-50 text-green-700">
                         {topic.name}
                       </Badge>
@@ -151,7 +156,6 @@ export function RevisionSummaryCard() {
               </div>
             )}
 
-            {/* Upcoming */}
             {summary.upcomingRevisions.length > 0 && (
               <div className="flex items-start gap-2">
                 <TrendingUp className="h-4 w-4 text-blue-500 mt-0.5" />
@@ -160,7 +164,7 @@ export function RevisionSummaryCard() {
                     {summary.upcomingRevisions.length} Coming Up
                   </div>
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {summary.upcomingRevisions.slice(0, 3).map((topic) => (
+                    {summary.upcomingRevisions.slice(0, 3).map((topic: SummaryTopic) => (
                       <Badge key={topic.id} variant="outline" className="text-xs border-blue-200">
                         {topic.name}
                       </Badge>
@@ -175,7 +179,6 @@ export function RevisionSummaryCard() {
               </div>
             )}
 
-            {/* All caught up */}
             {summary.overdueTopics.length === 0 &&
               summary.pendingRevisions.length === 0 &&
               summary.completedThisWeek.length === 0 &&
