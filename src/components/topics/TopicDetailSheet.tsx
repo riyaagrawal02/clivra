@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfidenceBadge } from "@/components/ui/ConfidenceBadge";
-import { YouTubeVideoCard } from "@/components/topics/YouTubeVideoCard";
+import { YouTubeVideoCard } from "@/components/topics/YoutubeVideoCard";
 import { useYouTubeRecommendations } from "@/hooks/useYouTubeRecommendations";
 import { useRevisionHistory, useRecordRevision } from "@/hooks/useRevisions";
 import { useUpdateTopicConfidence } from "@/hooks/useTopics";
@@ -23,6 +23,15 @@ interface TopicDetailSheetProps {
   subject: Tables<"subjects"> | null;
   examName?: string;
 }
+
+type RevisionHistoryItem = {
+  id: string;
+  completed: boolean;
+  created_at: string;
+  confidence_before: number;
+  confidence_after: number;
+  notes: string | null;
+};
 
 export function TopicDetailSheet({
   open,
@@ -48,6 +57,8 @@ export function TopicDetailSheet({
   const recordRevision = useRecordRevision();
   const updateConfidence = useUpdateTopicConfidence();
 
+  const revisionHistoryItems = (revisionHistory ?? []) as RevisionHistoryItem[];
+
   if (!topic || !subject) return null;
 
   const handleRecordRevision = async (completed: boolean) => {
@@ -59,7 +70,7 @@ export function TopicDetailSheet({
       skipped: !completed,
       notes: revisionNotes || undefined,
     });
-    
+
     setRevisionNotes("");
     onOpenChange(false);
   };
@@ -252,9 +263,9 @@ export function TopicDetailSheet({
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4 mt-4">
-            {revisionHistory && revisionHistory.length > 0 ? (
+            {revisionHistoryItems.length > 0 ? (
               <div className="space-y-2">
-                {revisionHistory.map((revision) => (
+                {revisionHistoryItems.map((revision) => (
                   <Card key={revision.id}>
                     <CardContent className="py-3 px-4">
                       <div className="flex justify-between items-center">
@@ -280,8 +291,8 @@ export function TopicDetailSheet({
                                 revision.confidence_after > revision.confidence_before
                                   ? "text-green-600"
                                   : revision.confidence_after < revision.confidence_before
-                                  ? "text-red-600"
-                                  : ""
+                                    ? "text-red-600"
+                                    : ""
                               }
                             >
                               {revision.confidence_after}

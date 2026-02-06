@@ -12,23 +12,23 @@ export type RevisionHistoryInsert = TablesInsert<"revision_history">;
 export function useRevisionHistory(topicId?: string) {
   const { user } = useAuth();
 
-  return useQuery({
+  return useQuery<RevisionHistory[]>({
     queryKey: ["revisionHistory", topicId, user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<RevisionHistory[]> => {
       if (!user) return [];
-      
+
       let query = supabase
         .from("revision_history")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false });
-      
+
       if (topicId) {
         query = query.eq("topic_id", topicId);
       }
-      
+
       const { data, error } = await query.limit(50);
-      
+
       if (error) throw error;
       return data as RevisionHistory[];
     },
@@ -90,7 +90,7 @@ export function useRecordRevision() {
         completed,
         skipped
       );
-      
+
       nextRevisionDate.setDate(nextRevisionDate.getDate() + updates.nextRevisionDays);
 
       await supabase
@@ -100,7 +100,6 @@ export function useRecordRevision() {
           revision_confidence_delta: updates.confidenceDelta,
           confidence_level: updates.newConfidence,
           next_revision_at: nextRevisionDate.toISOString(),
-          revision_count: supabase.rpc ? undefined : undefined, // Would need a DB function to increment
         })
         .eq("id", topicId)
         .eq("user_id", user.id);
@@ -110,7 +109,7 @@ export function useRecordRevision() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["revisionHistory"] });
       queryClient.invalidateQueries({ queryKey: ["topics"] });
-      
+
       if (variables.completed) {
         toast({
           title: "Revision completed!",
@@ -150,8 +149,8 @@ export function useRevisionSummary() {
         name: t.name,
         confidence_level: t.confidence_level ?? 1,
         priority_score: t.priority_score ?? 50,
-        estimated_hours: Number(t.estimated_hours) ?? 1,
-        completed_hours: Number(t.completed_hours) ?? 0,
+        estimated_hours: t.estimated_hours ?? 1,
+        completed_hours: t.completed_hours ?? 0,
         last_studied_at: t.last_studied_at,
         next_revision_at: t.next_revision_at,
         revision_count: t.revision_count ?? 0,
