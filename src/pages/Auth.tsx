@@ -50,6 +50,7 @@ export default function Auth() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -57,6 +58,14 @@ export default function Auth() {
     setIsSubmitting(false);
 
     if (error) {
+      if (error.status === 429 || error.message.toLowerCase().includes("rate limit")) {
+        toast({
+          variant: "destructive",
+          title: "Too many requests",
+          description: "Please wait a moment and try again.",
+        });
+        return;
+      }
       toast({
         variant: "destructive",
         title: "Sign in failed",
@@ -71,6 +80,7 @@ export default function Auth() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!validateForm()) return;
 
     setIsSubmitting(true);
@@ -78,6 +88,14 @@ export default function Auth() {
     setIsSubmitting(false);
 
     if (error) {
+      if (error.status === 429 || error.message.toLowerCase().includes("rate limit")) {
+        toast({
+          variant: "destructive",
+          title: "Too many requests",
+          description: "You've hit the sign-up limit. Please wait a bit and try again.",
+        });
+        return;
+      }
       if (error.message.includes("already registered")) {
         toast({
           variant: "destructive",

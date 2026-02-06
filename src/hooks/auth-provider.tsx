@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { type AuthChangeEvent, type Session, type User } from "@supabase/supabase-js";
+import { type AuthChangeEvent, type AuthError, type Session, type User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/hooks/auth-context";
 
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             },
         });
 
-        return { error: error as Error | null };
+        return { error: error as AuthError | null };
     };
 
     const signIn = async (email: string, password: string) => {
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             password,
         });
 
-        return { error: error as Error | null };
+        return { error: error as AuthError | null };
     };
 
     const signOut = async () => {
