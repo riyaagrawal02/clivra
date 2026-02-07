@@ -40,7 +40,7 @@ export function RevisionSummaryCard() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Weekly Stats */}
+       
         {weeklyStats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-muted/50 rounded-lg p-3 text-center">
@@ -70,7 +70,7 @@ export function RevisionSummaryCard() {
           </div>
         )}
 
-        {/* Completion Rate Bar */}
+      
         {weeklyStats && weeklyStats.total > 0 && (
           <div className="space-y-1">
             <div className="flex justify-between text-sm">
@@ -81,10 +81,10 @@ export function RevisionSummaryCard() {
           </div>
         )}
 
-        {/* Topic Status */}
+      
         {summary && (
           <div className="space-y-3 pt-2 border-t">
-            {/* Overdue Topics */}
+            
             {summary.overdueTopics.length > 0 && (
               <div className="flex items-start gap-2">
                 <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5" />
@@ -108,7 +108,7 @@ export function RevisionSummaryCard() {
               </div>
             )}
 
-            {/* Pending Topics */}
+            
             {summary.pendingRevisions.length > 0 && (
               <div className="flex items-start gap-2">
                 <Clock className="h-4 w-4 text-yellow-500 mt-0.5" />
