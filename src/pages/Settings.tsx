@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -25,37 +25,45 @@ import {
 } from "@/components/ui/dialog";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 import { User, Clock, GraduationCap, Save, Plus, Trash2, Check } from "lucide-react";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
-import { useExams, useCreateExam, useUpdateExam, useDeleteExam } from "@/hooks/useExams";
+import { useExams, useActiveExam, useCreateExam, useUpdateExam, useDeleteExam } from "@/hooks/useExams";
 import { format } from "date-fns";
 
 export default function Settings() {
   const { user, loading } = useAuth();
+  const { toast } = useToast();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: exams, isLoading: examsLoading } = useExams();
+  const { data: activeExam } = useActiveExam();
   const updateProfile = useUpdateProfile();
   const createExam = useCreateExam();
   const updateExam = useUpdateExam();
   const deleteExam = useDeleteExam();
-
-  const [fullName, setFullName] = useState<string | null>(null);
-  const [dailyHours, setDailyHours] = useState<number | null>(null);
-  const [preferredSlot, setPreferredSlot] = useState<"morning" | "afternoon" | "evening" | "night" | null>(null);
-  const [pomodoroWork, setPomodoroWork] = useState<number | null>(null);
-  const [pomodoroBreak, setPomodoroBreak] = useState<number | null>(null);
-
+  
+  const [fullName, setFullName] = useState("");
+  const [dailyHours, setDailyHours] = useState(3);
+  const [preferredSlot, setPreferredSlot] = useState("morning");
+  const [pomodoroWork, setPomodoroWork] = useState(25);
+  const [pomodoroBreak, setPomodoroBreak] = useState(5);
+  
   // New exam form
   const [isAddExamOpen, setIsAddExamOpen] = useState(false);
   const [newExamName, setNewExamName] = useState("");
   const [newExamDate, setNewExamDate] = useState("");
   const [newExamDescription, setNewExamDescription] = useState("");
 
-  const fullNameValue = fullName ?? profile?.full_name ?? "";
-  const dailyHoursValue = dailyHours ?? Number(profile?.daily_study_hours ?? 3);
-  const preferredSlotValue = preferredSlot ?? profile?.preferred_study_slot ?? "morning";
-  const pomodoroWorkValue = pomodoroWork ?? profile?.pomodoro_work_minutes ?? 25;
-  const pomodoroBreakValue = pomodoroBreak ?? profile?.pomodoro_break_minutes ?? 5;
+  // Load profile data
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name ?? "");
+      setDailyHours(Number(profile.daily_study_hours) ?? 3);
+      setPreferredSlot(profile.preferred_study_slot ?? "morning");
+      setPomodoroWork(profile.pomodoro_work_minutes ?? 25);
+      setPomodoroBreak(profile.pomodoro_break_minutes ?? 5);
+    }
+  }, [profile]);
 
   if (!loading && !user) {
     return <Navigate to="/auth" replace />;
@@ -63,24 +71,24 @@ export default function Settings() {
 
   const handleSave = async () => {
     await updateProfile.mutateAsync({
-      full_name: fullNameValue,
-      daily_study_hours: dailyHoursValue,
-      preferred_study_slot: preferredSlotValue,
-      pomodoro_work_minutes: pomodoroWorkValue,
-      pomodoro_break_minutes: pomodoroBreakValue,
+      full_name: fullName,
+      daily_study_hours: dailyHours,
+      preferred_study_slot: preferredSlot,
+      pomodoro_work_minutes: pomodoroWork,
+      pomodoro_break_minutes: pomodoroBreak,
     });
   };
 
   const handleAddExam = async () => {
     if (!newExamName.trim() || !newExamDate) return;
-
+    
     await createExam.mutateAsync({
       name: newExamName,
       exam_date: newExamDate,
       description: newExamDescription || null,
       is_active: true,
     });
-
+    
     setNewExamName("");
     setNewExamDate("");
     setNewExamDescription("");
@@ -180,8 +188,9 @@ export default function Settings() {
                 {exams.map((exam) => (
                   <div
                     key={exam.id}
-                    className={`flex items-center justify-between p-4 rounded-lg border ${exam.is_active ? "bg-accent border-primary/30" : "bg-card"
-                      }`}
+                    className={`flex items-center justify-between p-4 rounded-lg border ${
+                      exam.is_active ? "bg-accent border-primary/30" : "bg-card"
+                    }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
@@ -250,7 +259,7 @@ export default function Settings() {
                   <Label htmlFor="name">Full Name</Label>
                   <Input
                     id="name"
-                    value={fullNameValue}
+                    value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your name"
                   />
@@ -297,10 +306,10 @@ export default function Settings() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label>Daily Study Hours</Label>
-                    <span className="text-sm text-muted-foreground">{dailyHoursValue} hours</span>
+                    <span className="text-sm text-muted-foreground">{dailyHours} hours</span>
                   </div>
                   <Slider
-                    value={[dailyHoursValue]}
+                    value={[dailyHours]}
                     onValueChange={([value]) => setDailyHours(value)}
                     min={1}
                     max={10}
@@ -310,12 +319,7 @@ export default function Settings() {
 
                 <div className="space-y-2">
                   <Label>Preferred Study Slot</Label>
-                  <Select
-                    value={preferredSlotValue}
-                    onValueChange={(value) =>
-                      setPreferredSlot(value as "morning" | "afternoon" | "evening" | "night")
-                    }
-                  >
+                  <Select value={preferredSlot} onValueChange={setPreferredSlot}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -332,10 +336,10 @@ export default function Settings() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label>Pomodoro Work</Label>
-                      <span className="text-sm text-muted-foreground">{pomodoroWorkValue} min</span>
+                      <span className="text-sm text-muted-foreground">{pomodoroWork} min</span>
                     </div>
                     <Slider
-                      value={[pomodoroWorkValue]}
+                      value={[pomodoroWork]}
                       onValueChange={([value]) => setPomodoroWork(value)}
                       min={15}
                       max={60}
@@ -345,10 +349,10 @@ export default function Settings() {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label>Pomodoro Break</Label>
-                      <span className="text-sm text-muted-foreground">{pomodoroBreakValue} min</span>
+                      <span className="text-sm text-muted-foreground">{pomodoroBreak} min</span>
                     </div>
                     <Slider
-                      value={[pomodoroBreakValue]}
+                      value={[pomodoroBreak]}
                       onValueChange={([value]) => setPomodoroBreak(value)}
                       min={3}
                       max={15}
@@ -362,8 +366,8 @@ export default function Settings() {
         </Card>
 
         {/* Save Button */}
-        <Button
-          onClick={handleSave}
+        <Button 
+          onClick={handleSave} 
           className="w-full gap-2"
           disabled={updateProfile.isPending}
         >
