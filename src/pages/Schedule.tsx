@@ -4,18 +4,26 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   ChevronLeft, 
   ChevronRight, 
   Play, 
   Clock, 
   BookOpen,
-  TrendingUp,
+  RefreshCw,
+  Brain,
   Target,
   Sparkles,
-  Calendar as CalendarIcon
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { format, addDays, startOfWeek, isSameDay, isToday } from "date-fns";
@@ -25,8 +33,8 @@ import { useScheduleGenerator } from "@/hooks/useScheduleGenerator";
 
 const typeConfig = {
   learning: { icon: BookOpen, color: "text-primary", bgColor: "bg-primary/10", label: "Learning" },
-  revision: { icon: TrendingUp, color: "text-warning", bgColor: "bg-warning/10", label: "Revision" },
-  recall: { icon: Target, color: "text-info", bgColor: "bg-info/10", label: "Recall" },
+  revision: { icon: RefreshCw, color: "text-orange-600", bgColor: "bg-orange-50", label: "Revision" },
+  recall: { icon: Brain, color: "text-purple-600", bgColor: "bg-purple-50", label: "Recall" },
 };
 
 export default function Schedule() {
@@ -257,10 +265,27 @@ export default function Schedule() {
                           <Icon className={cn("h-5 w-5", config.color)} />
                         </div>
                         
-                        <div>
-                          <p className="font-medium">{session.topics?.name}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{session.topics?.name}</p>
+                            {(sessionType === "revision" || sessionType === "recall") && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className={cn("text-xs gap-1", config.color, config.bgColor, "border-0")}>
+                                      <Icon className="h-3 w-3" />
+                                      {config.label}
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">Scheduled due to revision cycle</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
-                            {session.topics?.subjects?.name} • {session.planned_duration_minutes} min {config.label.toLowerCase()}
+                            {session.topics?.subjects?.name} • {session.planned_duration_minutes} min
                           </p>
                         </div>
                       </div>

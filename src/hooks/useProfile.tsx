@@ -19,7 +19,7 @@ export function useProfile() {
         .select("*")
         .eq("user_id", user.id)
         .single();
-
+      
       if (error && error.code !== "PGRST116") throw error;
       return data as Profile | null;
     },
@@ -50,7 +50,7 @@ export function useUpdateProfile() {
           .eq("user_id", user.id)
           .select()
           .single();
-
+        
         if (error) throw error;
         return data;
       } else {
@@ -60,7 +60,7 @@ export function useUpdateProfile() {
           .insert({ ...updates, user_id: user.id })
           .select()
           .single();
-
+        
         if (error) throw error;
         return data;
       }
@@ -104,7 +104,7 @@ export function useUpdateStreak() {
         .eq("user_id", user.id)
         .select()
         .single();
-
+      
       if (error) throw error;
       return data;
     },

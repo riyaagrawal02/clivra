@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -25,49 +25,75 @@ import {
 } from "@/components/ui/dialog";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
 import { User, Clock, GraduationCap, Save, Plus, Trash2, Check } from "lucide-react";
 import { useProfile, useUpdateProfile } from "@/hooks/useProfile";
-import { useExams, useActiveExam, useCreateExam, useUpdateExam, useDeleteExam } from "@/hooks/useExams";
+import { useExams, useCreateExam, useUpdateExam, useDeleteExam } from "@/hooks/useExams";
 import { format } from "date-fns";
 
 export default function Settings() {
   const { user, loading } = useAuth();
-  const { toast } = useToast();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: exams, isLoading: examsLoading } = useExams();
-  const { data: activeExam } = useActiveExam();
   const updateProfile = useUpdateProfile();
   const createExam = useCreateExam();
   const updateExam = useUpdateExam();
   const deleteExam = useDeleteExam();
-  
-  const [fullName, setFullName] = useState("");
-  const [dailyHours, setDailyHours] = useState(3);
-  const [preferredSlot, setPreferredSlot] = useState("morning");
-  const [pomodoroWork, setPomodoroWork] = useState(25);
-  const [pomodoroBreak, setPomodoroBreak] = useState(5);
-  
-  // New exam form
-  const [isAddExamOpen, setIsAddExamOpen] = useState(false);
-  const [newExamName, setNewExamName] = useState("");
-  const [newExamDate, setNewExamDate] = useState("");
-  const [newExamDescription, setNewExamDescription] = useState("");
-
-  // Load profile data
-  useEffect(() => {
-    if (profile) {
-      setFullName(profile.full_name ?? "");
-      setDailyHours(Number(profile.daily_study_hours) ?? 3);
-      setPreferredSlot(profile.preferred_study_slot ?? "morning");
-      setPomodoroWork(profile.pomodoro_work_minutes ?? 25);
-      setPomodoroBreak(profile.pomodoro_break_minutes ?? 5);
-    }
-  }, [profile]);
 
   if (!loading && !user) {
     return <Navigate to="/auth" replace />;
   }
+
+  const profileKey = profile?.id ?? "profile-empty";
+
+  return (
+    <SettingsForm
+      key={profileKey}
+      user={user}
+      profile={profile}
+      profileLoading={profileLoading}
+      exams={exams}
+      examsLoading={examsLoading}
+      updateProfile={updateProfile}
+      createExam={createExam}
+      updateExam={updateExam}
+      deleteExam={deleteExam}
+    />
+  );
+}
+
+type SettingsFormProps = {
+  user: ReturnType<typeof useAuth>["user"];
+  profile: ReturnType<typeof useProfile>["data"];
+  profileLoading: boolean;
+  exams: ReturnType<typeof useExams>["data"];
+  examsLoading: boolean;
+  updateProfile: ReturnType<typeof useUpdateProfile>;
+  createExam: ReturnType<typeof useCreateExam>;
+  updateExam: ReturnType<typeof useUpdateExam>;
+  deleteExam: ReturnType<typeof useDeleteExam>;
+};
+
+function SettingsForm({
+  user,
+  profile,
+  profileLoading,
+  exams,
+  examsLoading,
+  updateProfile,
+  createExam,
+  updateExam,
+  deleteExam,
+}: SettingsFormProps) {
+  const [fullName, setFullName] = useState(() => profile?.full_name ?? "");
+  const [dailyHours, setDailyHours] = useState(() => Number(profile?.daily_study_hours ?? 3));
+  const [preferredSlot, setPreferredSlot] = useState(() => profile?.preferred_study_slot ?? "morning");
+  const [pomodoroWork, setPomodoroWork] = useState(() => profile?.pomodoro_work_minutes ?? 25);
+  const [pomodoroBreak, setPomodoroBreak] = useState(() => profile?.pomodoro_break_minutes ?? 5);
+
+  const [isAddExamOpen, setIsAddExamOpen] = useState(false);
+  const [newExamName, setNewExamName] = useState("");
+  const [newExamDate, setNewExamDate] = useState("");
+  const [newExamDescription, setNewExamDescription] = useState("");
 
   const handleSave = async () => {
     await updateProfile.mutateAsync({
@@ -81,14 +107,14 @@ export default function Settings() {
 
   const handleAddExam = async () => {
     if (!newExamName.trim() || !newExamDate) return;
-    
+
     await createExam.mutateAsync({
       name: newExamName,
       exam_date: newExamDate,
       description: newExamDescription || null,
       is_active: true,
     });
-    
+
     setNewExamName("");
     setNewExamDate("");
     setNewExamDescription("");
@@ -188,9 +214,8 @@ export default function Settings() {
                 {exams.map((exam) => (
                   <div
                     key={exam.id}
-                    className={`flex items-center justify-between p-4 rounded-lg border ${
-                      exam.is_active ? "bg-accent border-primary/30" : "bg-card"
-                    }`}
+                    className={`flex items-center justify-between p-4 rounded-lg border ${exam.is_active ? "bg-accent border-primary/30" : "bg-card"
+                      }`}
                   >
                     <div>
                       <div className="flex items-center gap-2">
@@ -266,15 +291,8 @@ export default function Settings() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    value={user?.email || ""}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Email cannot be changed
-                  </p>
+                  <Input id="email" value={user?.email || ""} disabled className="bg-muted" />
+                  <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                 </div>
               </>
             )}
@@ -366,11 +384,7 @@ export default function Settings() {
         </Card>
 
         {/* Save Button */}
-        <Button 
-          onClick={handleSave} 
-          className="w-full gap-2"
-          disabled={updateProfile.isPending}
-        >
+        <Button onClick={handleSave} className="w-full gap-2" disabled={updateProfile.isPending}>
           <Save className="h-4 w-4" />
           {updateProfile.isPending ? "Saving..." : "Save Changes"}
         </Button>

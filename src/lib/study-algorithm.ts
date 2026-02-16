@@ -26,7 +26,7 @@ export interface Topic {
   revision_confidence_delta?: number;
 }
 
-interface Subject {
+export interface Subject {
   id: string;
   name: string;
   strength: "weak" | "average" | "strong";
@@ -34,7 +34,7 @@ interface Subject {
   topics?: Topic[];
 }
 
-interface ScheduleSession {
+export interface ScheduleSession {
   topicId: string;
   topicName: string;
   subjectName: string;
@@ -43,6 +43,13 @@ interface ScheduleSession {
   durationMinutes: number;
   priorityScore: number;
   reason: string;
+  isRevisionScheduled?: boolean;
+}
+
+export interface RevisionEligibility {
+  isEligible: boolean;
+  reasons: string[];
+  urgencyScore: number;
 }
 
 // Weight constants for priority calculation
@@ -54,12 +61,156 @@ const WEIGHTS = {
   COMPLETION: 5, // Completion rate impact
 };
 
+// Revision-specific weights
+const REVISION_WEIGHTS = {
+  DAYS_SINCE_REVISION: 35,
+  CONFIDENCE: 30,
+  EXAM_PROXIMITY: 20,
+  ORIGINAL_DIFFICULTY: 15,
+};
+
 // Strength multipliers (weak subjects get higher priority)
 const STRENGTH_SCORES: Record<string, number> = {
   weak: 100,
   average: 60,
   strong: 30,
 };
+
+// Revision eligibility thresholds
+const REVISION_CONFIG = {
+  CONFIDENCE_THRESHOLD: 3, // Topics with confidence ≤ 3 need revision
+  DAYS_SINCE_REVISION_THRESHOLD: 7, // Topics not revised in N days
+  MAX_REVISION_PERCENTAGE: 40, // Max 40% of daily study time for revisions
+  MIN_REVISION_PERCENTAGE: 30, // Aim for at least 30% revision time
+};
+
+/**
+ * Check if a topic is eligible for revision
+ */
+export function checkRevisionEligibility(
+  topic: Topic,
+  daysUntilExam: number
+): RevisionEligibility {
+  const reasons: string[] = [];
+  let urgencyScore = 0;
+
+  // Condition 1: Topic has been completed at least once
+  const hasBeenStudied =
+    topic.last_studied_at !== null || topic.completed_hours > 0;
+
+  // Condition 2: Confidence score is below threshold
+  const lowConfidence =
+    topic.confidence_level <= REVISION_CONFIG.CONFIDENCE_THRESHOLD;
+  if (lowConfidence) {
+    reasons.push(`Low confidence (${topic.confidence_level}/5)`);
+    urgencyScore +=
+      (REVISION_CONFIG.CONFIDENCE_THRESHOLD - topic.confidence_level + 1) * 20;
+  }
+
+  // Condition 3: Not revised in the last N days
+  let daysSinceRevision = Infinity;
+  if (topic.last_revision_date) {
+    daysSinceRevision = Math.floor(
+      (Date.now() - new Date(topic.last_revision_date).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+  } else if (topic.last_studied_at) {
+    daysSinceRevision = Math.floor(
+      (Date.now() - new Date(topic.last_studied_at).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+  }
+
+  const needsRevisionByTime =
+    daysSinceRevision >= REVISION_CONFIG.DAYS_SINCE_REVISION_THRESHOLD;
+  if (needsRevisionByTime && hasBeenStudied) {
+    reasons.push(`Not revised in ${daysSinceRevision} days`);
+    urgencyScore += Math.min(daysSinceRevision * 5, 50);
+  }
+
+  // Add urgency based on exam proximity
+  if (daysUntilExam <= 7) {
+    urgencyScore += 30;
+    reasons.push("Exam approaching - final revision needed");
+  } else if (daysUntilExam <= 14) {
+    urgencyScore += 20;
+  }
+
+  const isEligible = hasBeenStudied && (lowConfidence || needsRevisionByTime);
+
+  return {
+    isEligible,
+    reasons,
+    urgencyScore: Math.min(urgencyScore, 100),
+  };
+}
+
+/**
+ * Calculate revision priority score for a topic
+ * Higher score = needs revision more urgently
+ */
+export function calculateRevisionPriority(
+  topic: Topic,
+  subjectStrength: "weak" | "average" | "strong",
+  daysUntilExam: number
+): { score: number; reasons: string[] } {
+  const reasons: string[] = [];
+  let totalScore = 0;
+
+  // 1. Days since last revision (longer = higher priority)
+  let daysSinceRevision = 0;
+  if (topic.last_revision_date) {
+    daysSinceRevision = Math.floor(
+      (Date.now() - new Date(topic.last_revision_date).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+  } else if (topic.last_studied_at) {
+    daysSinceRevision = Math.floor(
+      (Date.now() - new Date(topic.last_studied_at).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+  }
+
+  const recencyScore = Math.min(daysSinceRevision * 5, 100);
+  totalScore += (recencyScore / 100) * REVISION_WEIGHTS.DAYS_SINCE_REVISION;
+  if (daysSinceRevision >= 14) {
+    reasons.push("Overdue for revision");
+  } else if (daysSinceRevision >= 7) {
+    reasons.push("Due for scheduled revision");
+  }
+
+  // 2. Topic confidence score (lower = higher priority)
+  const confidenceScore = ((5 - topic.confidence_level) / 4) * 100;
+  totalScore += (confidenceScore / 100) * REVISION_WEIGHTS.CONFIDENCE;
+  if (topic.confidence_level <= 2) {
+    reasons.push("Low confidence - revision critical");
+  } else if (topic.confidence_level <= 3) {
+    reasons.push("Moderate confidence - revision recommended");
+  }
+
+  // 3. Exam proximity (closer = higher priority)
+  const proximityScore =
+    daysUntilExam <= 7
+      ? 100
+      : daysUntilExam <= 14
+      ? 80
+      : daysUntilExam <= 30
+      ? 60
+      : 30;
+  totalScore += (proximityScore / 100) * REVISION_WEIGHTS.EXAM_PROXIMITY;
+
+  // 4. Original topic difficulty (based on subject strength)
+  const difficultyScore = STRENGTH_SCORES[subjectStrength];
+  totalScore += (difficultyScore / 100) * REVISION_WEIGHTS.ORIGINAL_DIFFICULTY;
+  if (subjectStrength === "weak") {
+    reasons.push("Weak subject - extra attention needed");
+  }
+
+  return {
+    score: Math.round(Math.min(100, Math.max(0, totalScore))),
+    reasons,
+  };
+}
 
 /**
  * Calculate priority score for a topic
@@ -148,6 +299,7 @@ export function calculateTopicPriority(
 
 /**
  * Generate a daily study schedule based on available time and priorities
+ * Now includes intelligent revision planning
  */
 export function generateDailySchedule(
   subjects: Subject[],
@@ -159,70 +311,79 @@ export function generateDailySchedule(
   const schedule: ScheduleSession[] = [];
   let remainingMinutes = availableMinutes;
 
-  // Flatten topics with their priority scores
-  const topicsWithPriority: Array<{
+  // Separate topics into learning and revision candidates
+  const learningTopics: Array<{
     topic: Topic;
     subject: Subject;
     priority: { score: number; reasons: string[] };
   }> = [];
 
+  const revisionTopics: Array<{
+    topic: Topic;
+    subject: Subject;
+    revisionPriority: { score: number; reasons: string[] };
+    eligibility: RevisionEligibility;
+  }> = [];
+
   subjects.forEach((subject) => {
     (subject.topics || []).forEach((topic) => {
-      if (!topic.is_completed) {
+      if (topic.is_completed) return;
+
+      // Check revision eligibility
+      const eligibility = checkRevisionEligibility(topic, daysUntilExam);
+
+      if (eligibility.isEligible) {
+        const revisionPriority = calculateRevisionPriority(
+          topic,
+          subject.strength,
+          daysUntilExam
+        );
+        revisionTopics.push({ topic, subject, revisionPriority, eligibility });
+      } else {
         const priority = calculateTopicPriority(
           topic,
           subject.strength,
           daysUntilExam
         );
-        topicsWithPriority.push({ topic, subject, priority });
+        learningTopics.push({ topic, subject, priority });
       }
     });
   });
 
-  // Sort by priority (highest first)
-  topicsWithPriority.sort((a, b) => b.priority.score - a.priority.score);
+  // Sort by priority
+  learningTopics.sort((a, b) => b.priority.score - a.priority.score);
+  revisionTopics.sort(
+    (a, b) => b.revisionPriority.score - a.revisionPriority.score
+  );
 
-  // Session duration (one pomodoro = work + break)
+  // Session duration
   const sessionDuration = pomodoroWorkMinutes + pomodoroBreakMinutes;
 
-  // Allocate study sessions
-  // Strategy: Mix of new learning (60%), revision (30%), recall (10%)
-  const targetLearning = availableMinutes * 0.6;
-  const targetRevision = availableMinutes * 0.3;
-  const targetRecall = availableMinutes * 0.1;
-
-  let learningAllocated = 0;
+  // Calculate revision budget (30-40% of available time)
+  const revisionBudget = Math.floor(
+    (availableMinutes * REVISION_CONFIG.MAX_REVISION_PERCENTAGE) / 100
+  );
   let revisionAllocated = 0;
-  let recallAllocated = 0;
 
-  for (const { topic, subject, priority } of topicsWithPriority) {
-    if (remainingMinutes < sessionDuration) break;
+  // First, allocate revision sessions (30-40% cap)
+  for (const {
+    topic,
+    subject,
+    revisionPriority,
+    eligibility,
+  } of revisionTopics) {
+    if (remainingMinutes < pomodoroWorkMinutes) break;
+    if (revisionAllocated >= revisionBudget) break;
 
-    // Determine session type based on topic state and allocation
-    let sessionType: "learning" | "revision" | "recall";
-    let duration: number;
+    // Use shorter sessions for recall, longer for full revision
+    const isQuickRecall =
+      topic.revision_count >= 3 && topic.confidence_level >= 3;
+    const duration = isQuickRecall
+      ? Math.min(pomodoroWorkMinutes, remainingMinutes)
+      : Math.min(sessionDuration, remainingMinutes);
 
-    if (!topic.last_studied_at && learningAllocated < targetLearning) {
-      // New topic - learning session
-      sessionType = "learning";
-      duration = Math.min(sessionDuration * 2, remainingMinutes); // Two pomodoros for new topics
-      learningAllocated += duration;
-    } else if (topic.revision_count > 0 && recallAllocated < targetRecall) {
-      // Previously revised - quick recall
-      sessionType = "recall";
-      duration = Math.min(pomodoroWorkMinutes, remainingMinutes); // Short recall sessions
-      recallAllocated += duration;
-    } else if (revisionAllocated < targetRevision) {
-      // Needs revision
-      sessionType = "revision";
-      duration = Math.min(sessionDuration, remainingMinutes);
-      revisionAllocated += duration;
-    } else {
-      // Default to learning
-      sessionType = "learning";
-      duration = Math.min(sessionDuration, remainingMinutes);
-      learningAllocated += duration;
-    }
+    const sessionType = isQuickRecall ? "recall" : "revision";
+    const reason = eligibility.reasons[0] || "Scheduled due to revision cycle";
 
     schedule.push({
       topicId: topic.id,
@@ -231,14 +392,70 @@ export function generateDailySchedule(
       subjectColor: subject.color,
       type: sessionType,
       durationMinutes: duration,
+      priorityScore: revisionPriority.score,
+      reason,
+      isRevisionScheduled: true,
+    });
+
+    if (sessionType !== "recall") {
+      revisionAllocated += duration;
+    }
+    remainingMinutes -= duration;
+  }
+
+  // Then, allocate learning sessions with remaining time
+  for (const { topic, subject, priority } of learningTopics) {
+    if (remainingMinutes < sessionDuration) break;
+
+    // Determine duration based on topic state
+    let duration: number;
+    if (!topic.last_studied_at) {
+      // New topic - two pomodoros
+      duration = Math.min(sessionDuration * 2, remainingMinutes);
+    } else {
+      duration = Math.min(sessionDuration, remainingMinutes);
+    }
+
+    schedule.push({
+      topicId: topic.id,
+      topicName: topic.name,
+      subjectName: subject.name,
+      subjectColor: subject.color,
+      type: "learning",
+      durationMinutes: duration,
       priorityScore: priority.score,
       reason: priority.reasons[0] || "Scheduled for today",
+      isRevisionScheduled: false,
     });
 
     remainingMinutes -= duration;
   }
 
-  return schedule;
+  // Avoid consecutive heavy revisions - interleave sessions
+  const interleavedSchedule: ScheduleSession[] = [];
+  const revisionSessions = schedule.filter((s) => s.type === "revision");
+  const otherSessions = schedule.filter((s) => s.type !== "revision");
+
+  let revisionIdx = 0;
+  let otherIdx = 0;
+
+  while (
+    revisionIdx < revisionSessions.length ||
+    otherIdx < otherSessions.length
+  ) {
+    // Add 1-2 other sessions, then 1 revision
+    if (otherIdx < otherSessions.length) {
+      interleavedSchedule.push(otherSessions[otherIdx++]);
+    }
+    if (otherIdx < otherSessions.length) {
+      interleavedSchedule.push(otherSessions[otherIdx++]);
+    }
+    if (revisionIdx < revisionSessions.length) {
+      interleavedSchedule.push(revisionSessions[revisionIdx++]);
+    }
+  }
+
+  return interleavedSchedule;
 }
 
 /**
@@ -259,87 +476,6 @@ export function calculateNextRevision(
   const baseInterval = baseIntervals[intervalIndex];
 
   return Math.round(baseInterval * confidenceMultiplier);
-}
-
-export function calculatePostRevisionUpdates(
-  confidenceBefore: number,
-  revisionCount: number,
-  completed: boolean,
-  skipped: boolean
-): {
-  nextRevisionDays: number;
-  confidenceDelta: number;
-  newConfidence: number;
-} {
-  const baseConfidence = completed
-    ? confidenceBefore + 1
-    : confidenceBefore - 1;
-  const adjustedConfidence = skipped ? confidenceBefore - 1 : baseConfidence;
-  const newConfidence = Math.min(5, Math.max(1, adjustedConfidence));
-  const confidenceDelta = newConfidence - confidenceBefore;
-
-  const nextRevisionDays = skipped
-    ? 1
-    : calculateNextRevision(newConfidence, Math.max(0, revisionCount + 1));
-
-  return {
-    nextRevisionDays,
-    confidenceDelta,
-    newConfidence,
-  };
-}
-
-export function getRevisionSummary(topics: Topic[]): {
-  overdueTopics: Topic[];
-  pendingRevisions: Topic[];
-  completedThisWeek: Topic[];
-  upcomingRevisions: Topic[];
-} {
-  const now = new Date();
-  const startOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
-  const endOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate() + 1
-  );
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const upcomingWindowEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-  const overdueTopics: Topic[] = [];
-  const pendingRevisions: Topic[] = [];
-  const completedThisWeek: Topic[] = [];
-  const upcomingRevisions: Topic[] = [];
-
-  topics.forEach((topic) => {
-    if (topic.last_revision_date) {
-      const revisionDate = new Date(topic.last_revision_date);
-      if (revisionDate >= weekAgo && revisionDate <= now) {
-        completedThisWeek.push(topic);
-      }
-    }
-
-    if (topic.next_revision_at) {
-      const revisionAt = new Date(topic.next_revision_at);
-      if (revisionAt < startOfToday) {
-        overdueTopics.push(topic);
-      } else if (revisionAt >= startOfToday && revisionAt < endOfToday) {
-        pendingRevisions.push(topic);
-      } else if (revisionAt >= endOfToday && revisionAt <= upcomingWindowEnd) {
-        upcomingRevisions.push(topic);
-      }
-    }
-  });
-
-  return {
-    overdueTopics,
-    pendingRevisions,
-    completedThisWeek,
-    upcomingRevisions,
-  };
 }
 
 /**
@@ -432,5 +568,100 @@ export function rebalanceAfterMissed(
     extraMinutesPerDay: cappedExtra,
     daysToRecover,
     message: `Adding ${cappedExtra} extra minutes for ${daysToRecover} days to catch up.`,
+  };
+}
+
+/**
+ * Handle revision completion - increases confidence, reduces future frequency
+ */
+export function calculatePostRevisionUpdates(
+  currentConfidence: number,
+  revisionCount: number,
+  completed: boolean,
+  skipped: boolean
+): {
+  newConfidence: number;
+  confidenceDelta: number;
+  nextRevisionDays: number;
+  urgencyMultiplier: number;
+} {
+  let newConfidence = currentConfidence;
+  let confidenceDelta = 0;
+  let urgencyMultiplier = 1;
+
+  if (completed) {
+    // Completing a revision increases confidence
+    confidenceDelta = Math.min(1, 5 - currentConfidence);
+    newConfidence = Math.min(5, currentConfidence + confidenceDelta);
+    // Reduce urgency for future scheduling
+    urgencyMultiplier = 0.8;
+  } else if (skipped) {
+    // Skipping a revision increases urgency but doesn't overload
+    urgencyMultiplier = 1.3;
+    // Slight confidence decrease
+    confidenceDelta = -0.5;
+    newConfidence = Math.max(1, currentConfidence - 0.5);
+  }
+
+  const nextRevisionDays = calculateNextRevision(
+    newConfidence,
+    revisionCount + (completed ? 1 : 0)
+  );
+
+  return {
+    newConfidence: Math.round(newConfidence),
+    confidenceDelta,
+    nextRevisionDays,
+    urgencyMultiplier,
+  };
+}
+
+/**
+ * Get weekly revision summary
+ */
+export function getRevisionSummary(topics: Topic[]): {
+  pendingRevisions: Topic[];
+  completedThisWeek: Topic[];
+  overdueTopics: Topic[];
+  upcomingRevisions: Topic[];
+} {
+  const now = new Date();
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const oneWeekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const pendingRevisions: Topic[] = [];
+  const completedThisWeek: Topic[] = [];
+  const overdueTopics: Topic[] = [];
+  const upcomingRevisions: Topic[] = [];
+
+  for (const topic of topics) {
+    // Check if revised this week
+    if (topic.last_revision_date) {
+      const lastRevision = new Date(topic.last_revision_date);
+      if (lastRevision >= oneWeekAgo) {
+        completedThisWeek.push(topic);
+        continue;
+      }
+    }
+
+    // Check if overdue
+    if (topic.next_revision_at) {
+      const nextRevision = new Date(topic.next_revision_at);
+      if (nextRevision < now) {
+        overdueTopics.push(topic);
+      } else if (nextRevision <= oneWeekFromNow) {
+        upcomingRevisions.push(topic);
+      }
+    } else if (topic.confidence_level <= 3 && topic.last_studied_at) {
+      // No scheduled revision but low confidence
+      pendingRevisions.push(topic);
+    }
+  }
+
+  return {
+    pendingRevisions,
+    completedThisWeek,
+    overdueTopics,
+    upcomingRevisions,
   };
 }

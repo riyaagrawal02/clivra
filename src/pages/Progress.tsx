@@ -1,19 +1,20 @@
 import { useState } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
-import { AppLayout } from "../components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { ReadinessGauge } from "../components/ui/ReadinessGauge";
-import { ConfidenceBadge } from "../components/ui/ConfidenceBadge";
-import { Progress } from "../components/ui/progress";
-import { Skeleton } from "../components/ui/skeleton";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ReadinessGauge } from "@/components/ui/ReadinessGauge";
+import { ConfidenceBadge } from "@/components/ui/ConfidenceBadge";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { RevisionSummaryCard } from "@/components/progress/RevisionSummaryCard";
 import {
   Clock,
   TrendingUp,
   Flame,
   Target,
-  BookOpen
+  BookOpen,
 } from "lucide-react";
 import {
   XAxis,
@@ -25,14 +26,14 @@ import {
   Bar,
 } from "recharts";
 import { motion } from "framer-motion";
-import { useDashboardStats, useWeeklyAnalytics, useSubjectProgress } from "../hooks/useStats";
-import { useActiveExam, useDaysUntilExam } from "../hooks/useExams";
-import { useProfile } from "../hooks/useProfile";
+import { useDashboardStats, useWeeklyAnalytics, useSubjectProgress } from "@/hooks/useStats";
+import { useActiveExam, useDaysUntilExam } from "@/hooks/useExams";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function ProgressPage() {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("weekly");
-  
+
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: weeklyData, isLoading: weeklyLoading } = useWeeklyAnalytics();
   const { data: subjectProgress, isLoading: subjectsLoading } = useSubjectProgress();
@@ -212,7 +213,7 @@ export default function ProgressPage() {
                                 borderColor: "hsl(var(--border))",
                                 borderRadius: "8px",
                               }}
-                              formatter={(value: number | undefined) => [`${value ?? 0} min`, ""]}
+                              formatter={(value) => [`${value ?? 0} min`, ""]}
                             />
                             <Bar dataKey="planned" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} name="Planned" />
                             <Bar dataKey="completed" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="Completed" />
@@ -246,9 +247,9 @@ export default function ProgressPage() {
                         <div key={subject.name} className="space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <div 
-                                className="h-3 w-3 rounded-full" 
-                                style={{ backgroundColor: subject.color ?? '#0d9488' }} 
+                              <div
+                                className="h-3 w-3 rounded-full"
+                                style={{ backgroundColor: subject.color ?? '#0d9488' }}
                               />
                               <span className="font-medium">{subject.name}</span>
                             </div>
@@ -272,6 +273,11 @@ export default function ProgressPage() {
               </Tabs>
             </CardContent>
           </Card>
+        </motion.div>
+
+        {/* Revision Summary */}
+        <motion.div variants={itemVariants}>
+          <RevisionSummaryCard />
         </motion.div>
 
         {/* Streaks & Goals */}
