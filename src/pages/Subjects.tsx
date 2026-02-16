@@ -36,16 +36,14 @@ import { Label } from "@/components/ui/label";
 import { ConfidenceBadge } from "@/components/ui/ConfidenceBadge";
 import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, ChevronDown, ChevronRight, Trash2, Edit, BookOpen, AlertCircle } from "lucide-react";
+import { TopicDetailSheet } from "@/components/topics/TopicDetailSheet";
+import { Plus, ChevronDown, ChevronRight, Trash2, Edit, BookOpen, AlertCircle, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useSubjectsWithTopics, useCreateSubject, useDeleteSubject } from "@/hooks/useSubjects";
-import { useCreateTopic, useUpdateTopic, useDeleteTopic } from "@/hooks/useTopics";
+import { useSubjectsWithTopics, useCreateSubject,useDeleteSubject } from "@/hooks/useSubjects";
+import { useCreateTopic, useUpdateTopic, useDeleteTopic, type Topic } from "@/hooks/useTopics";
 import { useActiveExam } from "@/hooks/useExams";
-
-type SubjectsWithTopics = NonNullable<ReturnType<typeof useSubjectsWithTopics>["data"]>;
-type SubjectWithTopics = SubjectsWithTopics[number];
-type TopicWithDetails = SubjectWithTopics["topics"][number];
+import type { Tables } from "@/integrations/supabase/types";
 
 const strengthColors = {
   weak: "bg-priority-high/10 text-priority-high border-priority-high/30",
@@ -67,10 +65,12 @@ export default function Subjects() {
   const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
   const [isAddTopicOpen, setIsAddTopicOpen] = useState(false);
   const [isEditTopicOpen, setIsEditTopicOpen] = useState(false);
+  const [isTopicDetailOpen, setIsTopicDetailOpen] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<TopicWithDetails | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<Tables<"subjects"> | null>(null);
+  
 
-  // Form states
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectStrength, setNewSubjectStrength] = useState<"weak" | "average" | "strong">("average");
   const [newTopicName, setNewTopicName] = useState("");
@@ -93,15 +93,15 @@ export default function Subjects() {
 
   const handleAddSubject = async () => {
     if (!newSubjectName.trim()) return;
-
+    
     const color = newSubjectStrength === "weak" ? "#dc2626" : newSubjectStrength === "average" ? "#f59e0b" : "#16a34a";
-
+    
     await createSubject.mutateAsync({
       name: newSubjectName,
       strength: newSubjectStrength,
       color,
     });
-
+    
     setNewSubjectName("");
     setNewSubjectStrength("average");
     setIsAddSubjectOpen(false);
@@ -109,7 +109,7 @@ export default function Subjects() {
 
   const handleAddTopic = async () => {
     if (!newTopicName.trim() || !selectedSubjectId) return;
-
+    
     await createTopic.mutateAsync({
       subject_id: selectedSubjectId,
       name: newTopicName,
@@ -117,7 +117,7 @@ export default function Subjects() {
       confidence_level: 1,
       priority_score: 75,
     });
-
+    
     setNewTopicName("");
     setNewTopicHours("2");
     setIsAddTopicOpen(false);
@@ -126,12 +126,12 @@ export default function Subjects() {
 
   const handleEditTopic = async () => {
     if (!selectedTopic) return;
-
+    
     await updateTopic.mutateAsync({
       id: selectedTopic.id,
       confidence_level: editTopicConfidence,
     });
-
+    
     setIsEditTopicOpen(false);
     setSelectedTopic(null);
   };
@@ -141,10 +141,16 @@ export default function Subjects() {
     setIsAddTopicOpen(true);
   };
 
-  const openEditTopic = (topic: TopicWithDetails) => {
+  const openEditTopic = (topic: Topic) => {
     setSelectedTopic(topic);
     setEditTopicConfidence(topic.confidence_level ?? 1);
     setIsEditTopicOpen(true);
+  };
+
+  const openTopicDetail = (topic: Topic, subject: Tables<"subjects">) => {
+    setSelectedTopic(topic);
+    setSelectedSubject(subject);
+    setIsTopicDetailOpen(true);
   };
 
   const noActiveExam = !activeExam;
@@ -152,7 +158,6 @@ export default function Subjects() {
   return (
     <AppLayout title="Subjects & Topics">
       <div className="space-y-6">
-        {/* No Exam Warning */}
         {noActiveExam && !isLoading && (
           <Card className="border-warning/50 bg-warning/5">
             <CardContent className="p-4 flex items-center gap-3">
@@ -235,8 +240,8 @@ export default function Subjects() {
               <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="font-semibold text-lg mb-2">No subjects yet</h3>
               <p className="text-muted-foreground mb-4">
-                {noActiveExam
-                  ? "Set up an exam first, then add your subjects."
+                {noActiveExam 
+                  ? "Set up an exam first, then add your subjects." 
                   : "Add your first subject to start organizing your study plan."}
               </p>
             </CardContent>
@@ -274,9 +279,9 @@ export default function Subjects() {
                   </span>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
                         className="h-8 w-8"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -321,8 +326,8 @@ export default function Subjects() {
                       {(!subject.topics || subject.topics.length === 0) ? (
                         <div className="p-6 text-center">
                           <p className="text-muted-foreground mb-3">No topics yet</p>
-                          <Button
-                            variant="outline"
+                          <Button 
+                            variant="outline" 
                             size="sm"
                             onClick={(e) => { e.stopPropagation(); openAddTopic(subject.id); }}
                           >
@@ -335,7 +340,8 @@ export default function Subjects() {
                           {subject.topics.map((topic) => (
                             <div
                               key={topic.id}
-                              className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
+                              className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors cursor-pointer"
+                              onClick={() => openTopicDetail(topic, subject)}
                             >
                               <div className="flex items-center gap-4">
                                 <PriorityIndicator score={topic.priority_score ?? 50} />
@@ -348,17 +354,30 @@ export default function Subjects() {
                               </div>
                               <div className="flex items-center gap-3">
                                 <ConfidenceBadge level={topic.confidence_level ?? 1} showLabel />
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-8 w-8"
+                                  onClick={(e) => { e.stopPropagation(); openEditTopic(topic); }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8"
-                                  onClick={() => openEditTopic(topic)}
+                                  onClick={(e) => { e.stopPropagation(); openTopicDetail(topic, subject); }}
                                 >
-                                  <Edit className="h-4 w-4" />
+                                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
                                 </Button>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
                                       <Trash2 className="h-4 w-4 text-muted-foreground" />
                                     </Button>
                                   </AlertDialogTrigger>
@@ -404,7 +423,6 @@ export default function Subjects() {
           ))}
         </div>
 
-        {/* Add Topic Dialog */}
         <Dialog open={isAddTopicOpen} onOpenChange={setIsAddTopicOpen}>
           <DialogContent>
             <DialogHeader>
@@ -447,7 +465,7 @@ export default function Subjects() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Topic Dialog */}
+       
         <Dialog open={isEditTopicOpen} onOpenChange={setIsEditTopicOpen}>
           <DialogContent>
             <DialogHeader>
@@ -459,8 +477,8 @@ export default function Subjects() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Confidence Level</Label>
-                <Select
-                  value={editTopicConfidence.toString()}
+                <Select 
+                  value={editTopicConfidence.toString()} 
                   onValueChange={(v) => setEditTopicConfidence(parseInt(v))}
                 >
                   <SelectTrigger>
@@ -486,6 +504,15 @@ export default function Subjects() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        
+        <TopicDetailSheet
+          open={isTopicDetailOpen}
+          onOpenChange={setIsTopicDetailOpen}
+          topic={selectedTopic}
+          subject={selectedSubject}
+          examName={activeExam?.name}
+        />
       </div>
     </AppLayout>
   );
