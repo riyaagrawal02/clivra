@@ -24,15 +24,6 @@ interface TopicDetailSheetProps {
   examName?: string;
 }
 
-type RevisionHistoryItem = {
-  id: string;
-  completed: boolean;
-  created_at: string;
-  confidence_before: number;
-  confidence_after: number;
-  notes: string | null;
-};
-
 export function TopicDetailSheet({
   open,
   onOpenChange,
@@ -57,23 +48,23 @@ export function TopicDetailSheet({
   const recordRevision = useRecordRevision();
   const updateConfidence = useUpdateTopicConfidence();
 
-  const revisionHistoryItems = (revisionHistory ?? []) as RevisionHistoryItem[];
-
   if (!topic || !subject) return null;
 
   const handleRecordRevision = async (completed: boolean) => {
-    await recordRevision.mutateAsync({
-      topicId: topic.id,
-      confidenceBefore: topic.confidence_level ?? 1,
-      confidenceAfter: newConfidence,
-      completed,
-      skipped: !completed,
-      notes: revisionNotes || undefined,
-    });
+  await recordRevision.mutateAsync({
+    topicId: topic.id,
+    revisionType: "revision",
+    confidenceBefore: topic.confidence_level ?? 1,
+    confidenceAfter: newConfidence,
+    completed,
+    skipped: !completed,
+    notes: revisionNotes || undefined,
+  });
 
-    setRevisionNotes("");
-    onOpenChange(false);
-  };
+  setRevisionNotes("");
+  onOpenChange(false);
+};
+
 
   const handleUpdateConfidence = async () => {
     await updateConfidence.mutateAsync({
@@ -263,9 +254,9 @@ export function TopicDetailSheet({
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4 mt-4">
-            {revisionHistoryItems.length > 0 ? (
+            {revisionHistory && revisionHistory.length > 0 ? (
               <div className="space-y-2">
-                {revisionHistoryItems.map((revision) => (
+                {revisionHistory.map((revision) => (
                   <Card key={revision.id}>
                     <CardContent className="py-3 px-4">
                       <div className="flex justify-between items-center">
@@ -291,8 +282,8 @@ export function TopicDetailSheet({
                                 revision.confidence_after > revision.confidence_before
                                   ? "text-green-600"
                                   : revision.confidence_after < revision.confidence_before
-                                    ? "text-red-600"
-                                    : ""
+                                  ? "text-red-600"
+                                  : ""
                               }
                             >
                               {revision.confidence_after}

@@ -1,19 +1,19 @@
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { Navigate, useNavigate } from "react-router-dom";
-import { AppLayout } from "../components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Progress } from "../components/ui/progress";
-import { ReadinessGauge } from "../components/ui/ReadinessGauge";
-import { PriorityIndicator } from "../components/ui/PriorityIndicator";
-import { ConfidenceBadge } from "../components/ui/ConfidenceBadge";
-import { Skeleton } from "../components/ui/skeleton";
-import {
-  Play,
-  Calendar,
-  Clock,
-  Target,
-  TrendingUp,
+import { AppLayout } from "@/components/layout/AppLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { ReadinessGauge } from "@/components/ui/ReadinessGauge";
+import { PriorityIndicator } from "@/components/ui/PriorityIndicator";
+import { ConfidenceBadge } from "@/components/ui/ConfidenceBadge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  Play, 
+  Calendar, 
+  Clock, 
+  Target, 
+  TrendingUp, 
   Flame,
   BookOpen,
   ArrowRight,
@@ -21,10 +21,10 @@ import {
   Sparkles
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { useDashboardStats, useNextStudySession } from "../hooks/useStats";
-import { useTodaySessions, useStartSession } from "../hooks/useStudySessions";
-import { useActiveExam } from "../hooks/useExams";
-import { useScheduleGenerator } from "../hooks/useScheduleGenerator";
+import { useDashboardStats, useNextStudySession } from "@/hooks/useStats";
+import { useTodaySessions, useStartSession } from "@/hooks/useStudySessions";
+import { useActiveExam } from "@/hooks/useExams";
+import { useScheduleGenerator } from "@/hooks/useScheduleGenerator";
 import { format } from "date-fns";
 
 export default function Dashboard() {
@@ -56,7 +56,7 @@ export default function Dashboard() {
     }
   };
 
-  const todayProgress = stats
+  const todayProgress = stats 
     ? Math.round((stats.todayCompleted / Math.max(stats.todayPlanned, 1)) * 100)
     : 0;
 
@@ -155,8 +155,8 @@ export default function Dashboard() {
                     </div>
                   )}
                   {nextSession ? (
-                    <Button
-                      size="lg"
+                    <Button 
+                      size="lg" 
                       variant="secondary"
                       className="gap-2 shadow-lg"
                       onClick={handleStartSession}
@@ -166,8 +166,8 @@ export default function Dashboard() {
                       Start Session
                     </Button>
                   ) : hasTopics && noSessions ? (
-                    <Button
-                      size="lg"
+                    <Button 
+                      size="lg" 
                       variant="secondary"
                       className="gap-2 shadow-lg"
                       onClick={handleGenerateTodaySchedule}
@@ -177,8 +177,8 @@ export default function Dashboard() {
                       {generating ? "Generating..." : "Generate Schedule"}
                     </Button>
                   ) : (
-                    <Button
-                      size="lg"
+                    <Button 
+                      size="lg" 
                       variant="secondary"
                       className="gap-2 shadow-lg"
                       onClick={() => navigate("/subjects")}
@@ -305,15 +305,17 @@ export default function Dashboard() {
                     {todaySessions?.slice(0, 4).map((session) => (
                       <div
                         key={session.id}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${session.status === "in_progress" ? "bg-accent border-primary/20" :
-                            session.status === "completed" ? "bg-muted/50 opacity-75" :
-                              "bg-card"
-                          }`}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          session.status === "in_progress" ? "bg-accent border-primary/20" : 
+                          session.status === "completed" ? "bg-muted/50 opacity-75" :
+                          "bg-card"
+                        }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${session.session_type === "learning" ? "bg-primary/10" :
-                              session.session_type === "revision" ? "bg-warning/10" : "bg-info/10"
-                            }`}>
+                          <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${
+                            session.session_type === "learning" ? "bg-primary/10" :
+                            session.session_type === "revision" ? "bg-warning/10" : "bg-info/10"
+                          }`}>
                             {session.session_type === "learning" ? (
                               <BookOpen className="h-5 w-5 text-primary" />
                             ) : session.session_type === "revision" ? (
@@ -360,7 +362,7 @@ export default function Dashboard() {
                     message={stats?.readiness?.message ?? "Start adding topics to track your progress."}
                   />
                 )}
-
+                
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Completion</span>

@@ -44,4 +44,4 @@ BEGIN
     CREATE POLICY "Users can delete their own youtube cache"
     ON public.youtube_cache FOR DELETE USING (auth.uid() = user_id);
   END IF;
-END $$;
+END $$;   
