@@ -1,63 +1,56 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { type AuthChangeEvent, type AuthError, type Session, type User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "@/hooks/auth-context";
+import { apiFetch, clearAuthToken, getAuthToken, setAuthToken } from "@/lib/api";
+import type { AuthUser } from "@/types/auth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [session, setSession] = useState<Session | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState<AuthUser | null>(null);
+    const [loading, setLoading] = useState(() => Boolean(getAuthToken()));
 
     useEffect(() => {
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            setLoading(false);
-        });
+        const token = getAuthToken();
+        if (!token) {
+            return;
+        }
 
-        supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            setLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
+        apiFetch<{ user: AuthUser }>("/auth/me")
+            .then((data) => setUser(data.user))
+            .catch(() => {
+                clearAuthToken();
+                setUser(null);
+            })
+            .finally(() => setLoading(false));
     }, []);
 
-    const signUp = async (email: string, password: string, fullName?: string) => {
-        const redirectUrl = `${window.location.origin}/`;
-
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                emailRedirectTo: redirectUrl,
-                data: {
-                    full_name: fullName,
-                },
-            },
+    const signInWithPassword = async (email: string, password: string) => {
+        const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ email, password }),
         });
 
-        return { error: error as AuthError | null };
+        setAuthToken(data.token);
+        setUser(data.user);
     };
 
-    const signIn = async (email: string, password: string) => {
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
+    const signUpWithPassword = async (email: string, password: string, fullName?: string) => {
+        const data = await apiFetch<{ token: string; user: AuthUser }>("/auth/register", {
+            method: "POST",
+            body: JSON.stringify({ email, password, fullName }),
         });
 
-        return { error: error as AuthError | null };
+        setAuthToken(data.token);
+        setUser(data.user);
     };
 
     const signOut = async () => {
-        await supabase.auth.signOut();
+        clearAuthToken();
+        setUser(null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut }}>
+        <AuthContext.Provider
+            value={{ user, loading, signInWithPassword, signUpWithPassword, signOut }}
+        >
             {children}
         </AuthContext.Provider>
     );

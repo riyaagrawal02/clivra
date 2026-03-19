@@ -1,18 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { startOfDay, endOfDay, endOfWeek, format } from "date-fns";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { apiFetch } from "@/lib/api";
+import { endOfWeek, format } from "date-fns";
+import type { StudySession as StudySessionRecord, Topic, Subject } from "@/types/backend";
 
-export type StudySession = Tables<"study_sessions">;
-export type StudySessionInsert = TablesInsert<"study_sessions">;
-export type StudySessionUpdate = TablesUpdate<"study_sessions">;
+export type StudySession = StudySessionRecord;
+export type StudySessionInsert = Omit<StudySessionRecord, "id" | "user_id" | "created_at" | "updated_at">;
+export type StudySessionUpdate = Partial<StudySessionInsert> & { id: string };
 
 export interface StudySessionWithTopic extends StudySession {
-  topics: Tables<"topics"> & {
-    subjects: Tables<"subjects">;
-  };
+  topics: (Topic & {
+    subjects: Subject | null;
+  }) | null;
 }
 
 export function useTodaySessions() {
@@ -23,23 +23,10 @@ export function useTodaySessions() {
     queryKey: ["studySessions", "today", user?.id, format(today, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("study_sessions")
-        .select(`
-          *,
-          topics (
-            *,
-            subjects (*)
-          )
-        `)
-        .eq("user_id", user.id)
-        .gte("scheduled_at", startOfDay(today).toISOString())
-        .lte("scheduled_at", endOfDay(today).toISOString())
-        .order("scheduled_at", { ascending: true });
-
-      if (error) throw error;
-      return data as StudySessionWithTopic[];
+      const data = await apiFetch<{ study_sessions: StudySessionWithTopic[] }>(
+        `/study-sessions?date=${format(today, "yyyy-MM-dd")}`
+      );
+      return data.study_sessions;
     },
     enabled: !!user,
   });
@@ -52,23 +39,10 @@ export function useSessionsByDate(date: Date) {
     queryKey: ["studySessions", "byDate", user?.id, format(date, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("study_sessions")
-        .select(`
-          *,
-          topics (
-            *,
-            subjects (*)
-          )
-        `)
-        .eq("user_id", user.id)
-        .gte("scheduled_at", startOfDay(date).toISOString())
-        .lte("scheduled_at", endOfDay(date).toISOString())
-        .order("scheduled_at", { ascending: true });
-
-      if (error) throw error;
-      return data as StudySessionWithTopic[];
+      const data = await apiFetch<{ study_sessions: StudySessionWithTopic[] }>(
+        `/study-sessions?date=${format(date, "yyyy-MM-dd")}`
+      );
+      return data.study_sessions;
     },
     enabled: !!user,
   });
@@ -82,23 +56,10 @@ export function useWeekSessions(weekStart: Date) {
     queryKey: ["studySessions", "week", user?.id, format(weekStart, "yyyy-MM-dd")],
     queryFn: async () => {
       if (!user) return [];
-
-      const { data, error } = await supabase
-        .from("study_sessions")
-        .select(`
-          *,
-          topics (
-            *,
-            subjects (*)
-          )
-        `)
-        .eq("user_id", user.id)
-        .gte("scheduled_at", weekStart.toISOString())
-        .lte("scheduled_at", weekEnd.toISOString())
-        .order("scheduled_at", { ascending: true });
-
-      if (error) throw error;
-      return data as StudySessionWithTopic[];
+      const data = await apiFetch<{ study_sessions: StudySessionWithTopic[] }>(
+        `/study-sessions/week?start=${weekStart.toISOString()}&end=${weekEnd.toISOString()}`
+      );
+      return data.study_sessions;
     },
     enabled: !!user,
   });
@@ -112,15 +73,11 @@ export function useCreateStudySession() {
   return useMutation({
     mutationFn: async (session: Omit<StudySessionInsert, "user_id">) => {
       if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("study_sessions")
-        .insert({ ...session, user_id: user.id })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch<{ study_session: StudySession }>("/study-sessions", {
+        method: "POST",
+        body: JSON.stringify(session),
+      });
+      return data.study_session;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["studySessions"] });
@@ -139,20 +96,11 @@ export function useStartSession() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("study_sessions")
-        .update({
-          status: "in_progress",
-          started_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch<{ study_session: StudySession }>(
+        `/study-sessions/${id}/start`,
+        { method: "PUT" }
+      );
+      return data.study_session;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["studySessions"] });
@@ -178,23 +126,18 @@ export function useCompleteSession() {
       notes?: string;
     }) => {
       if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("study_sessions")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          actual_duration_minutes: actualMinutes,
-          pomodoros_completed: pomodorosCompleted,
-          notes,
-        })
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch<{ study_session: StudySession }>(
+        `/study-sessions/${id}/complete`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            actual_duration_minutes: actualMinutes,
+            pomodoros_completed: pomodorosCompleted,
+            notes,
+          }),
+        }
+      );
+      return data.study_session;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["studySessions"] });
@@ -214,17 +157,11 @@ export function useSkipSession() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("study_sessions")
-        .update({ status: "missed" })
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch<{ study_session: StudySession }>(
+        `/study-sessions/${id}/skip`,
+        { method: "PUT" }
+      );
+      return data.study_session;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["studySessions"] });
@@ -239,14 +176,7 @@ export function useDeleteSession() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!user) throw new Error("Not authenticated");
-
-      const { error } = await supabase
-        .from("study_sessions")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
-
-      if (error) throw error;
+      await apiFetch(`/study-sessions/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["studySessions"] });
@@ -262,16 +192,11 @@ export function useBulkCreateSessions() {
   return useMutation({
     mutationFn: async (sessions: Omit<StudySessionInsert, "user_id">[]) => {
       if (!user) throw new Error("Not authenticated");
-
-      const sessionsWithUserId = sessions.map(s => ({ ...s, user_id: user.id }));
-
-      const { data, error } = await supabase
-        .from("study_sessions")
-        .insert(sessionsWithUserId)
-        .select();
-
-      if (error) throw error;
-      return data;
+      const data = await apiFetch<{ study_sessions: StudySession[] }>("/study-sessions/bulk", {
+        method: "POST",
+        body: JSON.stringify({ sessions }),
+      });
+      return data.study_sessions;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["studySessions"] });

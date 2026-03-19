@@ -40,10 +40,10 @@ import { TopicDetailSheet } from "@/components/topics/TopicDetailSheet";
 import { Plus, ChevronDown, ChevronRight, Trash2, Edit, BookOpen, AlertCircle, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useSubjectsWithTopics, useCreateSubject,useDeleteSubject } from "@/hooks/useSubjects";
+import { useSubjectsWithTopics, useCreateSubject, useDeleteSubject } from "@/hooks/useSubjects";
 import { useCreateTopic, useUpdateTopic, useDeleteTopic, type Topic } from "@/hooks/useTopics";
 import { useActiveExam } from "@/hooks/useExams";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Subject } from "@/types/backend";
 
 const strengthColors = {
   weak: "bg-priority-high/10 text-priority-high border-priority-high/30",
@@ -68,8 +68,8 @@ export default function Subjects() {
   const [isTopicDetailOpen, setIsTopicDetailOpen] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string | null>(null);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
-  const [selectedSubject, setSelectedSubject] = useState<Tables<"subjects"> | null>(null);
-  
+  const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
+
 
   const [newSubjectName, setNewSubjectName] = useState("");
   const [newSubjectStrength, setNewSubjectStrength] = useState<"weak" | "average" | "strong">("average");
@@ -93,15 +93,15 @@ export default function Subjects() {
 
   const handleAddSubject = async () => {
     if (!newSubjectName.trim()) return;
-    
+
     const color = newSubjectStrength === "weak" ? "#dc2626" : newSubjectStrength === "average" ? "#f59e0b" : "#16a34a";
-    
+
     await createSubject.mutateAsync({
       name: newSubjectName,
       strength: newSubjectStrength,
       color,
     });
-    
+
     setNewSubjectName("");
     setNewSubjectStrength("average");
     setIsAddSubjectOpen(false);
@@ -109,7 +109,7 @@ export default function Subjects() {
 
   const handleAddTopic = async () => {
     if (!newTopicName.trim() || !selectedSubjectId) return;
-    
+
     await createTopic.mutateAsync({
       subject_id: selectedSubjectId,
       name: newTopicName,
@@ -117,7 +117,7 @@ export default function Subjects() {
       confidence_level: 1,
       priority_score: 75,
     });
-    
+
     setNewTopicName("");
     setNewTopicHours("2");
     setIsAddTopicOpen(false);
@@ -126,12 +126,12 @@ export default function Subjects() {
 
   const handleEditTopic = async () => {
     if (!selectedTopic) return;
-    
+
     await updateTopic.mutateAsync({
       id: selectedTopic.id,
       confidence_level: editTopicConfidence,
     });
-    
+
     setIsEditTopicOpen(false);
     setSelectedTopic(null);
   };
@@ -147,7 +147,7 @@ export default function Subjects() {
     setIsEditTopicOpen(true);
   };
 
-  const openTopicDetail = (topic: Topic, subject: Tables<"subjects">) => {
+  const openTopicDetail = (topic: Topic, subject: Subject) => {
     setSelectedTopic(topic);
     setSelectedSubject(subject);
     setIsTopicDetailOpen(true);
@@ -240,8 +240,8 @@ export default function Subjects() {
               <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="font-semibold text-lg mb-2">No subjects yet</h3>
               <p className="text-muted-foreground mb-4">
-                {noActiveExam 
-                  ? "Set up an exam first, then add your subjects." 
+                {noActiveExam
+                  ? "Set up an exam first, then add your subjects."
                   : "Add your first subject to start organizing your study plan."}
               </p>
             </CardContent>
@@ -279,9 +279,9 @@ export default function Subjects() {
                   </span>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -326,8 +326,8 @@ export default function Subjects() {
                       {(!subject.topics || subject.topics.length === 0) ? (
                         <div className="p-6 text-center">
                           <p className="text-muted-foreground mb-3">No topics yet</p>
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={(e) => { e.stopPropagation(); openAddTopic(subject.id); }}
                           >
@@ -354,9 +354,9 @@ export default function Subjects() {
                               </div>
                               <div className="flex items-center gap-3">
                                 <ConfidenceBadge level={topic.confidence_level ?? 1} showLabel />
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
                                   className="h-8 w-8"
                                   onClick={(e) => { e.stopPropagation(); openEditTopic(topic); }}
                                 >
@@ -372,9 +372,9 @@ export default function Subjects() {
                                 </Button>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="icon" 
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
                                       className="h-8 w-8"
                                       onClick={(e) => e.stopPropagation()}
                                     >
@@ -465,7 +465,7 @@ export default function Subjects() {
           </DialogContent>
         </Dialog>
 
-       
+
         <Dialog open={isEditTopicOpen} onOpenChange={setIsEditTopicOpen}>
           <DialogContent>
             <DialogHeader>
@@ -477,8 +477,8 @@ export default function Subjects() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label>Confidence Level</Label>
-                <Select 
-                  value={editTopicConfidence.toString()} 
+                <Select
+                  value={editTopicConfidence.toString()}
                   onValueChange={(v) => setEditTopicConfidence(parseInt(v))}
                 >
                   <SelectTrigger>
@@ -505,7 +505,7 @@ export default function Subjects() {
           </DialogContent>
         </Dialog>
 
-        
+
         <TopicDetailSheet
           open={isTopicDetailOpen}
           onOpenChange={setIsTopicDetailOpen}

@@ -1,17 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-
-export interface YouTubeVideo {
-  id: string;
-  title: string;
-  channelName: string;
-  duration: string;
-  durationSeconds: number;
-  thumbnail: string;
-  viewCount: string;
-  publishedAt: string;
-}
+import { apiFetch } from "@/lib/api";
+import type { YouTubeVideo } from "@/types/backend";
 
 interface UseYouTubeRecommendationsParams {
   topicId: string;
@@ -38,38 +28,15 @@ export function useYouTubeRecommendations({
     queryKey: ["youtubeRecommendations", topicId, user?.id],
     queryFn: async () => {
       if (!user) return [];
-
-      
-      const { data: cached } = await supabase
-        .from("youtube_cache")
-        .select("*")
-        .eq("topic_id", topicId)
-        .eq("user_id", user.id)
-        .single();
-
-      if (cached && new Date(cached.expires_at) > new Date()) {
-        const videos = cached.videos;
-        if (Array.isArray(videos)) {
-          return videos as unknown as YouTubeVideo[];
+      const data = await apiFetch<{ videos: YouTubeVideo[]; fromCache: boolean }>(
+        "/youtube/recommendations",
+        {
+          method: "POST",
+          body: JSON.stringify({ topicId, topicName, subjectName, examContext }),
         }
-        return [];
-      }
+      );
 
-      const { data, error } = await supabase.functions.invoke("youtube-recommendations", {
-        body: {
-          topicId,
-          topicName,
-          subjectName,
-          examContext,
-        },
-      });
-
-      if (error) {
-        console.error("YouTube API error:", error);
-        return [];
-      }
-
-      return (data?.videos as YouTubeVideo[]) || [];
+      return data.videos || [];
     },
     enabled: !!user && !!topicId && shouldFetch,
     staleTime: 1000 * 60 * 60 * 24, // 24 hours
@@ -84,12 +51,7 @@ export function useRefreshYouTubeCache() {
   return useMutation({
     mutationFn: async ({ topicId }: { topicId: string }) => {
       if (!user) throw new Error("Not authenticated");
-
-      await supabase
-        .from("youtube_cache")
-        .delete()
-        .eq("topic_id", topicId)
-        .eq("user_id", user.id);
+      await apiFetch(`/youtube/cache/${topicId}`, { method: "DELETE" });
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({

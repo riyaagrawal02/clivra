@@ -1,11 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables, TablesUpdate } from "@/integrations/supabase/types";
+import { apiFetch } from "@/lib/api";
+import type { Profile } from "@/types/backend";
 
-export type Profile = Tables<"profiles">;
-export type ProfileUpdate = TablesUpdate<"profiles">;
+export type ProfileUpdate = Partial<Omit<Profile, "id" | "user_id" | "created_at" | "updated_at">>;
 
 export function useProfile() {
   const { user } = useAuth();
@@ -14,14 +13,8 @@ export function useProfile() {
     queryKey: ["profile", user?.id],
     queryFn: async () => {
       if (!user) return null;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-      
-      if (error && error.code !== "PGRST116") throw error;
-      return data as Profile | null;
+      const data = await apiFetch<{ profile: Profile | null }>("/profile");
+      return data.profile ?? null;
     },
     enabled: !!user,
   });
@@ -35,35 +28,11 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (updates: ProfileUpdate) => {
       if (!user) throw new Error("Not authenticated");
-
-      // Try to update first
-      const { data: existing } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-
-      if (existing) {
-        const { data, error } = await supabase
-          .from("profiles")
-          .update(updates)
-          .eq("user_id", user.id)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        return data;
-      } else {
-        // Insert if doesn't exist
-        const { data, error } = await supabase
-          .from("profiles")
-          .insert({ ...updates, user_id: user.id })
-          .select()
-          .single();
-        
-        if (error) throw error;
-        return data;
-      }
+      const data = await apiFetch<{ profile: Profile }>("/profile", {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      });
+      return data.profile;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
@@ -82,31 +51,11 @@ export function useUpdateStreak() {
   return useMutation({
     mutationFn: async ({ increment }: { increment: boolean }) => {
       if (!user) throw new Error("Not authenticated");
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("current_streak, longest_streak")
-        .eq("user_id", user.id)
-        .single();
-
-      const currentStreak = profile?.current_streak ?? 0;
-      const longestStreak = profile?.longest_streak ?? 0;
-
-      const newStreak = increment ? currentStreak + 1 : 0;
-      const newLongest = Math.max(newStreak, longestStreak);
-
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({
-          current_streak: newStreak,
-          longest_streak: newLongest,
-        })
-        .eq("user_id", user.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      const data = await apiFetch<{ profile: Profile }>("/profile/streak", {
+        method: "POST",
+        body: JSON.stringify({ increment }),
+      });
+      return data.profile;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });

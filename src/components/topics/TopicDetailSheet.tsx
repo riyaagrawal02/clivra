@@ -14,13 +14,13 @@ import { useUpdateTopicConfidence } from "@/hooks/useTopics";
 import { BookOpen, Video, History, Clock, TrendingUp, TrendingDown } from "lucide-react";
 import { format } from "date-fns";
 import type { Topic } from "@/hooks/useTopics";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Subject } from "@/types/backend";
 
 interface TopicDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   topic: Topic | null;
-  subject: Tables<"subjects"> | null;
+  subject: Subject | null;
   examName?: string;
 }
 
@@ -51,19 +51,19 @@ export function TopicDetailSheet({
   if (!topic || !subject) return null;
 
   const handleRecordRevision = async (completed: boolean) => {
-  await recordRevision.mutateAsync({
-    topicId: topic.id,
-    revisionType: "revision",
-    confidenceBefore: topic.confidence_level ?? 1,
-    confidenceAfter: newConfidence,
-    completed,
-    skipped: !completed,
-    notes: revisionNotes || undefined,
-  });
+    await recordRevision.mutateAsync({
+      topicId: topic.id,
+      revisionType: "revision",
+      confidenceBefore: topic.confidence_level ?? 1,
+      confidenceAfter: newConfidence,
+      completed,
+      skipped: !completed,
+      notes: revisionNotes || undefined,
+    });
 
-  setRevisionNotes("");
-  onOpenChange(false);
-};
+    setRevisionNotes("");
+    onOpenChange(false);
+  };
 
 
   const handleUpdateConfidence = async () => {
@@ -268,7 +268,9 @@ export function TopicDetailSheet({
                             {revision.completed ? "Completed" : "Skipped"}
                           </Badge>
                           <div className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(revision.created_at), "MMM d, yyyy h:mm a")}
+                            {revision.created_at
+                              ? format(new Date(revision.created_at), "MMM d, yyyy h:mm a")
+                              : "Date unavailable"}
                           </div>
                         </div>
                         <div className="text-right">
@@ -282,8 +284,8 @@ export function TopicDetailSheet({
                                 revision.confidence_after > revision.confidence_before
                                   ? "text-green-600"
                                   : revision.confidence_after < revision.confidence_before
-                                  ? "text-red-600"
-                                  : ""
+                                    ? "text-red-600"
+                                    : ""
                               }
                             >
                               {revision.confidence_after}

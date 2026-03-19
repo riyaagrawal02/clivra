@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Clock, Eye } from "lucide-react";
-import type { YouTubeVideo } from "@/hooks/useYoutubeRecommendations";
+import type { YouTubeVideo } from "@/types/backend";
 
 interface YouTubeVideoCardProps {
   video: YouTubeVideo;

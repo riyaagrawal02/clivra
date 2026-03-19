@@ -139,7 +139,23 @@ Schedule Rebalancing + Readiness Prediction
 * Typescript
 * Component-driven UI
 * Mobile-responsive, distraction-free design
-* Superbase
+* Node.js + Express
+* MongoDB (Atlas)
+* Google OAuth
+## 🚀 Local Development
+
+### Frontend
+
+1. Create a `.env` from `.env.example`
+2. Install dependencies: `npm install`
+3. Run: `npm run dev`
+
+### Backend
+
+1. Create `server/.env` from `server/.env.example`
+2. Install dependencies: `cd server` then `npm install`
+3. Run: `npm run dev`
+
 
 ---
 

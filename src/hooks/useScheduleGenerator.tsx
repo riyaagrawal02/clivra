@@ -6,11 +6,12 @@ import { useProfile } from "@/hooks/useProfile";
 import { useUpdateDailyProgress } from "@/hooks/useDailyProgress";
 import { generateDailySchedule } from "@/lib/study-algorithm";
 import { format, addMinutes, startOfDay, setHours, setMinutes } from "date-fns";
-import type { TablesInsert } from "@/integrations/supabase/types";
+import type { StudySession } from "@/types/backend";
 
 type SubjectsWithTopics = NonNullable<ReturnType<typeof useSubjectsWithTopics>["data"]>;
 type SubjectWithTopics = SubjectsWithTopics[number];
 type TopicWithDetails = SubjectWithTopics["topics"][number];
+type StudySessionInsert = Omit<StudySession, "id" | "user_id" | "created_at" | "updated_at">;
 
 export function useScheduleGenerator() {
   const { user } = useAuth();
@@ -44,8 +45,8 @@ export function useScheduleGenerator() {
         priority_score: topic.priority_score ?? 50,
         estimated_hours: Number(topic.estimated_hours ?? 1),
         completed_hours: Number(topic.completed_hours ?? 0),
-        last_studied_at: topic.last_studied_at,
-        next_revision_at: topic.next_revision_at,
+        last_studied_at: topic.last_studied_at ?? null,
+        next_revision_at: topic.next_revision_at ?? null,
         revision_count: topic.revision_count ?? 0,
         is_completed: topic.is_completed ?? false,
       })),
@@ -75,7 +76,7 @@ export function useScheduleGenerator() {
 
     // Convert to study_sessions format
     let currentTime = setMinutes(setHours(startOfDay(date), startHour), 0);
-    const sessions: Omit<TablesInsert<"study_sessions">, "user_id">[] = [];
+    const sessions: Omit<StudySessionInsert, "user_id">[] = [];
     let totalPlannedMinutes = 0;
 
     for (const session of scheduleSessions) {

@@ -1,123 +1,32 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { GraduationCap, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { z } from "zod";
-
-const emailSchema = z.string().email("Please enter a valid email address");
-const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 export default function Auth() {
-  const { user, loading, signIn, signUp } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"signin" | "signup">("signin");
+  const { user, loading, signInWithPassword, signUpWithPassword } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // Form state
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [activeTab, setActiveTab] = useState("signin");
+  const [signInEmail, setSignInEmail] = useState("");
+  const [signInPassword, setSignInPassword] = useState("");
+  const [signUpName, setSignUpName] = useState("");
+  const [signUpEmail, setSignUpEmail] = useState("");
+  const [signUpPassword, setSignUpPassword] = useState("");
+  const [signUpConfirm, setSignUpConfirm] = useState("");
+  const [signInLoading, setSignInLoading] = useState(false);
+  const [signUpLoading, setSignUpLoading] = useState(false);
 
   // Redirect if already logged in
   if (!loading && user) {
     return <Navigate to="/dashboard" replace />;
   }
-
-  const validateForm = () => {
-    const newErrors: { email?: string; password?: string } = {};
-
-    const emailResult = emailSchema.safeParse(email);
-    if (!emailResult.success) {
-      newErrors.email = emailResult.error.issues[0]?.message;
-    }
-
-    const passwordResult = passwordSchema.safeParse(password);
-    if (!passwordResult.success) {
-      newErrors.password = passwordResult.error.issues[0]?.message;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-    const { error } = await signIn(email, password);
-    setIsSubmitting(false);
-
-    if (error) {
-      if (error.status === 429 || error.message.toLowerCase().includes("rate limit")) {
-        toast({
-          variant: "destructive",
-          title: "Too many requests",
-          description: "Please wait a moment and try again.",
-        });
-        return;
-      }
-      toast({
-        variant: "destructive",
-        title: "Sign in failed",
-        description: error.message === "Invalid login credentials"
-          ? "Invalid email or password. Please try again."
-          : error.message,
-      });
-    } else {
-      navigate("/dashboard");
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    if (!validateForm()) return;
-
-    setIsSubmitting(true);
-    const { error } = await signUp(email, password, fullName);
-    setIsSubmitting(false);
-
-    if (error) {
-      if (error.status === 429 || error.message.toLowerCase().includes("rate limit")) {
-        toast({
-          variant: "destructive",
-          title: "Too many requests",
-          description: "You've hit the sign-up limit. Please wait a bit and try again.",
-        });
-        return;
-      }
-      if (error.message.includes("already registered")) {
-        toast({
-          variant: "destructive",
-          title: "Account exists",
-          description: "This email is already registered. Please sign in instead.",
-        });
-        setActiveTab("signin");
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Sign up failed",
-          description: error.message,
-        });
-      }
-    } else {
-      toast({
-        title: "Account created!",
-        description: "Welcome to Clivra. Let's set up your study plan.",
-      });
-      navigate("/dashboard");
-    }
-  };
 
   if (loading) {
     return (
@@ -126,6 +35,61 @@ export default function Auth() {
       </div>
     );
   }
+
+  const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setSignInLoading(true);
+    try {
+      await signInWithPassword(signInEmail.trim(), signInPassword);
+      navigate("/dashboard");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Please try again.";
+      toast({
+        variant: "destructive",
+        title: "Sign-in failed",
+        description: message,
+      });
+    } finally {
+      setSignInLoading(false);
+    }
+  };
+
+  const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (signUpPassword.length < 8) {
+      toast({
+        variant: "destructive",
+        title: "Password too short",
+        description: "Use at least 8 characters.",
+      });
+      return;
+    }
+
+    if (signUpPassword !== signUpConfirm) {
+      toast({
+        variant: "destructive",
+        title: "Passwords do not match",
+        description: "Please re-enter your password.",
+      });
+      return;
+    }
+
+    setSignUpLoading(true);
+    try {
+      await signUpWithPassword(signUpEmail.trim(), signUpPassword, signUpName.trim() || undefined);
+      navigate("/dashboard");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Please try again.";
+      toast({
+        variant: "destructive",
+        title: "Sign-up failed",
+        description: message,
+      });
+    } finally {
+      setSignUpLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gradient-hero p-4">
@@ -145,59 +109,55 @@ export default function Auth() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "signin" | "signup")}>
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign in</TabsTrigger>
+              <TabsTrigger value="signup">Sign up</TabsTrigger>
             </TabsList>
 
             <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-4">
+              <form className="space-y-4" onSubmit={handleSignIn}>
                 <div className="space-y-2">
                   <Label htmlFor="signin-email">Email</Label>
                   <Input
                     id="signin-email"
                     type="email"
+                    autoComplete="email"
                     placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={errors.email ? "border-destructive" : ""}
+                    value={signInEmail}
+                    onChange={(event) => setSignInEmail(event.target.value)}
+                    required
                   />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signin-password">Password</Label>
                   <Input
                     id="signin-password"
                     type="password"
+                    autoComplete="current-password"
                     placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={errors.password ? "border-destructive" : ""}
+                    value={signInPassword}
+                    onChange={(event) => setSignInPassword(event.target.value)}
+                    required
                   />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
                 </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Sign In
+                <Button type="submit" className="w-full" disabled={signInLoading}>
+                  {signInLoading ? "Signing in..." : "Sign in"}
                 </Button>
               </form>
             </TabsContent>
 
             <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
+              <form className="space-y-4" onSubmit={handleSignUp}>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
+                  <Label htmlFor="signup-name">Full name</Label>
                   <Input
                     id="signup-name"
                     type="text"
-                    placeholder="John Doe"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    autoComplete="name"
+                    placeholder="Your name"
+                    value={signUpName}
+                    onChange={(event) => setSignUpName(event.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
@@ -205,32 +165,39 @@ export default function Auth() {
                   <Input
                     id="signup-email"
                     type="email"
+                    autoComplete="email"
                     placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={errors.email ? "border-destructive" : ""}
+                    value={signUpEmail}
+                    onChange={(event) => setSignUpEmail(event.target.value)}
+                    required
                   />
-                  {errors.email && (
-                    <p className="text-sm text-destructive">{errors.email}</p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
                   <Input
                     id="signup-password"
                     type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={errors.password ? "border-destructive" : ""}
+                    autoComplete="new-password"
+                    placeholder="At least 8 characters"
+                    value={signUpPassword}
+                    onChange={(event) => setSignUpPassword(event.target.value)}
+                    required
                   />
-                  {errors.password && (
-                    <p className="text-sm text-destructive">{errors.password}</p>
-                  )}
                 </div>
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Account
+                <div className="space-y-2">
+                  <Label htmlFor="signup-confirm">Confirm password</Label>
+                  <Input
+                    id="signup-confirm"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="Repeat your password"
+                    value={signUpConfirm}
+                    onChange={(event) => setSignUpConfirm(event.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={signUpLoading}>
+                  {signUpLoading ? "Creating account..." : "Create account"}
                 </Button>
               </form>
             </TabsContent>

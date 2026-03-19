@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useActiveExam } from "@/hooks/useExams";
 import { useToast } from "@/hooks/use-toast";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { apiFetch } from "@/lib/api";
+import type { Subject as SubjectRecord, Topic as TopicRecord } from "@/types/backend";
 
-export type Subject = Tables<"subjects">;
-export type SubjectInsert = TablesInsert<"subjects">;
-export type SubjectUpdate = TablesUpdate<"subjects">;
+export type Subject = SubjectRecord;
+export type SubjectInsert = Omit<SubjectRecord, "id" | "user_id" | "created_at" | "updated_at">;
+export type SubjectUpdate = Partial<SubjectInsert> & { id: string };
 
 export function useSubjects() {
   const { user } = useAuth();
@@ -17,15 +17,10 @@ export function useSubjects() {
     queryKey: ["subjects", user?.id, activeExam?.id],
     queryFn: async () => {
       if (!user || !activeExam) return [];
-      const { data, error } = await supabase
-        .from("subjects")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("exam_id", activeExam.id)
-        .order("name", { ascending: true });
-      
-      if (error) throw error;
-      return data as Subject[];
+      const data = await apiFetch<{ subjects: Subject[] }>(
+        `/subjects?examId=${activeExam.id}`
+      );
+      return data.subjects;
     },
     enabled: !!user && !!activeExam,
   });
@@ -39,29 +34,10 @@ export function useSubjectsWithTopics() {
     queryKey: ["subjectsWithTopics", user?.id, activeExam?.id],
     queryFn: async () => {
       if (!user || !activeExam) return [];
-      
-      const { data: subjects, error: subjectsError } = await supabase
-        .from("subjects")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("exam_id", activeExam.id)
-        .order("name", { ascending: true });
-      
-      if (subjectsError) throw subjectsError;
-
-      const { data: topics, error: topicsError } = await supabase
-        .from("topics")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("priority_score", { ascending: false });
-      
-      if (topicsError) throw topicsError;
-
-      // Join topics to subjects
-      return subjects.map(subject => ({
-        ...subject,
-        topics: topics.filter(t => t.subject_id === subject.id),
-      }));
+      const data = await apiFetch<{ subjects: (Subject & { topics: TopicRecord[] })[] }>(
+        `/subjects/with-topics?examId=${activeExam.id}`
+      );
+      return data.subjects;
     },
     enabled: !!user && !!activeExam,
   });
@@ -77,15 +53,11 @@ export function useCreateSubject() {
     mutationFn: async (subject: Omit<SubjectInsert, "user_id" | "exam_id">) => {
       if (!user) throw new Error("Not authenticated");
       if (!activeExam) throw new Error("No active exam selected");
-
-      const { data, error } = await supabase
-        .from("subjects")
-        .insert({ ...subject, user_id: user.id, exam_id: activeExam.id })
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      const data = await apiFetch<{ subject: Subject }>("/subjects", {
+        method: "POST",
+        body: JSON.stringify({ ...subject, exam_id: activeExam.id }),
+      });
+      return data.subject;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
@@ -104,19 +76,13 @@ export function useUpdateSubject() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ id, ...updates }: SubjectUpdate & { id: string }) => {
+    mutationFn: async ({ id, ...updates }: SubjectUpdate) => {
       if (!user) throw new Error("Not authenticated");
-
-      const { data, error } = await supabase
-        .from("subjects")
-        .update(updates)
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .select()
-        .single();
-      
-      if (error) throw error;
-      return data;
+      const data = await apiFetch<{ subject: Subject }>(`/subjects/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      });
+      return data.subject;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });
@@ -137,21 +103,7 @@ export function useDeleteSubject() {
   return useMutation({
     mutationFn: async (id: string) => {
       if (!user) throw new Error("Not authenticated");
-      
-      // First delete all topics under this subject
-      await supabase
-        .from("topics")
-        .delete()
-        .eq("subject_id", id)
-        .eq("user_id", user.id);
-
-      const { error } = await supabase
-        .from("subjects")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", user.id);
-      
-      if (error) throw error;
+      await apiFetch(`/subjects/${id}`, { method: "DELETE" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subjects"] });

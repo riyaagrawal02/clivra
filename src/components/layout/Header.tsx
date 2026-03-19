@@ -25,7 +25,7 @@ export function Header({ title }: HeaderProps) {
     navigate("/auth");
   };
 
-  const initials = user?.user_metadata?.full_name
+  const initials = user?.full_name
     ?.split(" ")
     .map((n: string) => n[0])
     .join("")
@@ -51,7 +51,7 @@ export function Header({ title }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-10 w-10 rounded-full">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={user?.user_metadata?.avatar_url} />
+                <AvatarImage src={user?.avatar_url ?? undefined} />
                 <AvatarFallback className="bg-primary text-primary-foreground font-medium">
                   {initials}
                 </AvatarFallback>
@@ -62,7 +62,7 @@ export function Header({ title }: HeaderProps) {
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium">
-                  {user?.user_metadata?.full_name || "Student"}
+                  {user?.full_name || "Student"}
                 </p>
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
