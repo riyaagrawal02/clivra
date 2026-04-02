@@ -99,6 +99,36 @@ export type RevisionHistory = {
   created_at?: string;
 };
 
+export type StudyPlan = {
+  id: string;
+  user_id: string;
+  date: string;
+  total_minutes?: number | null;
+  max_subjects?: number | null;
+  pomodoro_work_minutes?: number | null;
+  pomodoro_break_minutes?: number | null;
+  generated_at?: string | null;
+  session_ids?: string[] | null;
+  recovery_minutes?: number | null;
+  status?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type RevisionSchedule = {
+  id: string;
+  user_id: string;
+  topic_id: string;
+  next_revision_at: string;
+  interval_days: number;
+  interval_index?: number | null;
+  status?: string | null;
+  last_revision_at?: string | null;
+  last_session_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type YouTubeVideo = {
   id: string;
   title: string;

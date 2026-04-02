@@ -16,6 +16,7 @@ import dailyProgressRoutes from "./routes/daily-progress";
 import statsRoutes from "./routes/stats";
 import revisionsRoutes from "./routes/revisions";
 import youtubeRoutes from "./routes/youtube";
+import scheduleRoutes from "./routes/schedule";
 
 const app = express();
 
@@ -23,19 +24,20 @@ app.set("trust proxy", env.NODE_ENV === "production");
 
 app.use(helmet());
 app.use(compression());
-app.use(
-  morgan(env.NODE_ENV === "production" ? "combined" : "dev")
-);
+app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
 app.use(
   cors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin || env.ALLOWED_ORIGINS.includes(origin)) {
         return callback(null, true);
       }
       return callback(new Error("Not allowed by CORS"));
     },
-  })
+  }),
 );
 app.use(express.json({ limit: "1mb" }));
 
@@ -60,14 +62,25 @@ app.use("/api/daily-progress", dailyProgressRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/revisions", revisionsRoutes);
 app.use("/api/youtube", youtubeRoutes);
+app.use("/api/schedule", scheduleRoutes);
 
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  void _next;
-  console.error(err);
-  const status = (err as { status?: number }).status ?? (err.message.includes("CORS") ? 403 : 500);
-  const message = env.NODE_ENV === "production" ? "Server error" : err.message;
-  res.status(status).json({ error: message });
-});
+app.use(
+  (
+    err: Error,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction,
+  ) => {
+    void _next;
+    console.error(err);
+    const status =
+      (err as { status?: number }).status ??
+      (err.message.includes("CORS") ? 403 : 500);
+    const message =
+      env.NODE_ENV === "production" ? "Server error" : err.message;
+    res.status(status).json({ error: message });
+  },
+);
 
 connectDb()
   .then(() => {

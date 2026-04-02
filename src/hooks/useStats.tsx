@@ -1,16 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { useActiveExam, useDaysUntilExam } from "@/hooks/useExams";
-import { useProfile } from "@/hooks/useProfile";
-import { calculateExamReadiness } from "@/lib/study-algorithm";
+import { useActiveExam } from "@/hooks/useExams";
 import { apiFetch } from "@/lib/api";
 import type { StudySessionWithTopic } from "@/hooks/useStudySessions";
 
 export function useDashboardStats() {
   const { user } = useAuth();
   const { data: activeExam } = useActiveExam();
-  const { data: profile } = useProfile();
-  const daysUntilExam = useDaysUntilExam();
 
   return useQuery({
     queryKey: ["dashboardStats", user?.id, activeExam?.id],
@@ -25,6 +21,10 @@ export function useDashboardStats() {
           topicsCompleted: number;
           completionPercentage: number;
           avgConfidence: number;
+          revisionCoverage: number;
+          consistencyScore: number;
+          confidenceTrendScore: number;
+          readiness: { status: string; percentage: number };
           daysUntilExam: number | null;
           examName: string | null;
           todayCompleted: number;
@@ -33,14 +33,7 @@ export function useDashboardStats() {
         }
       }>("/stats/dashboard");
 
-      const readiness = calculateExamReadiness(
-        data.stats.completionPercentage,
-        data.stats.avgConfidence,
-        profile?.current_streak ?? 0,
-        daysUntilExam ?? 30
-      );
-
-      return { ...data.stats, readiness };
+      return data.stats;
     },
     enabled: !!user,
   });
@@ -88,6 +81,29 @@ export function useSubjectProgress() {
         "/stats/subject-progress"
       );
       return data.subjects;
+    },
+    enabled: !!user,
+  });
+}
+
+export function useWeeklyReport() {
+  const { user } = useAuth();
+
+  return useQuery({
+    queryKey: ["weeklyReport", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const data = await apiFetch<{
+        report: {
+          plannedMinutes: number;
+          completedMinutes: number;
+          missedSessions: number;
+          recoveredSessions: number;
+          confidenceTrendScore: number;
+          subjectEffort: { name: string; color: string; minutes: number }[];
+        };
+      }>("/stats/weekly-report");
+      return data.report;
     },
     enabled: !!user,
   });

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth, type AuthRequest } from "../middleware/auth";
 import { asyncHandler } from "../utils/async-handler";
 import RevisionHistory from "../models/RevisionHistory";
+import RevisionSchedule from "../models/RevisionSchedule";
 
 const router = Router();
 
@@ -16,18 +17,39 @@ router.get(
       query.topic_id = topicId;
     }
 
-    const revisions = await RevisionHistory.find(query).sort({ created_at: -1 }).limit(50);
+    const revisions = await RevisionHistory.find(query)
+      .sort({ created_at: -1 })
+      .limit(50);
     res.json({ revisions });
-  })
+  }),
 );
 
 router.post(
   "/",
   asyncHandler(async (req: AuthRequest, res) => {
     const payload = req.body ?? {};
-    const revision = await RevisionHistory.create({ ...payload, user_id: req.userId });
+    const revision = await RevisionHistory.create({
+      ...payload,
+      user_id: req.userId,
+    });
     res.json({ revision });
-  })
+  }),
+);
+
+router.get(
+  "/schedule",
+  asyncHandler(async (req: AuthRequest, res) => {
+    const topicId = req.query.topicId as string | undefined;
+    const query: Record<string, unknown> = { user_id: req.userId };
+    if (topicId) {
+      query.topic_id = topicId;
+    }
+
+    const schedules = await RevisionSchedule.find(query).sort({
+      next_revision_at: 1,
+    });
+    res.json({ schedules });
+  }),
 );
 
 router.get(
@@ -45,7 +67,10 @@ router.get(
     const skipped = revisions.filter((r) => r.skipped).length;
     const total = revisions.length;
     const avgConfidenceGain = total
-      ? revisions.reduce((sum, r) => sum + (r.confidence_after - r.confidence_before), 0) / total
+      ? revisions.reduce(
+          (sum, r) => sum + (r.confidence_after - r.confidence_before),
+          0,
+        ) / total
       : 0;
 
     res.json({
@@ -57,7 +82,7 @@ router.get(
         avgConfidenceGain: Math.round(avgConfidenceGain * 10) / 10,
       },
     });
-  })
+  }),
 );
 
 export default router;
