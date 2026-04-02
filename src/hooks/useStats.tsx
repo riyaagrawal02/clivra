@@ -24,7 +24,11 @@ export function useDashboardStats() {
           revisionCoverage: number;
           consistencyScore: number;
           confidenceTrendScore: number;
-          readiness: { status: string; percentage: number };
+          readiness: {
+            status: "not_ready" | "improving" | "almost_ready" | "exam_ready";
+            percentage: number;
+            message?: string;
+          };
           daysUntilExam: number | null;
           examName: string | null;
           todayCompleted: number;
